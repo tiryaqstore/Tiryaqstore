@@ -356,7 +356,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
 .gal-dots button{position:relative;width:9px;height:9px;border-radius:50%;border:0;padding:0;background:rgba(255,255,255,.5);cursor:pointer}
 .gal-dots button::after{content:'';position:absolute;inset:-9px}
 .gal-dots button.on{background:#fff}
-.gal-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:34px;height:34px;border-radius:50%;border:0;background:rgba(0,0,0,.4);color:#fff;font-size:22px;line-height:32px;padding:0;cursor:pointer}
+.gal-nav{direction:ltr;unicode-bidi:isolate;position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:34px;height:34px;border-radius:50%;border:0;background:rgba(0,0,0,.4);color:#fff;font-size:22px;line-height:32px;padding:0;cursor:pointer}
 .gal-l{left:8px}.gal-r{right:8px}
 .ptr{position:fixed;top:-50px;left:50%;transform:translateX(-50%);z-index:90;padding:8px 16px;border-radius:20px;background:rgba(15,25,15,.92);color:#fff;font-size:13px;pointer-events:none;transition:top .18s}
 
@@ -1081,7 +1081,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
     var m=/^admin-(home|orders|products|storeedit|delivery|pixel|telegram|editor|settings)$/.exec(x);
     adminCur=m?m[1]:'home';bg.area='admin';
     document.body.setAttribute('data-area','admin');
-    $('adm-gate').hidden=authed;$('adm-shell').hidden=!authed;
+    $('adm-gate').hidden=authed||restoring;$('adm-shell').hidden=!authed;
     var s=SECS.filter(function(z){return z[0]===adminCur})[0];
     document.title=S.settings.storeName+' · '+(authed?s[1]:'لوحة الإدارة');
     if(authed){drawSidebar();runAdmin()}
@@ -1106,6 +1106,8 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
     function end(){if(act&&dy>110){ind.textContent='جارٍ التحديث…';ind.style.top='20px';location.reload()}else ind.style.top='-50px';act=false;dy=0}
     addEventListener('touchend',end,{passive:true});addEventListener('touchcancel',end,{passive:true});
   })();
+  var restoring=false;
+  try{var s0=JSON.parse(localStorage.getItem('tiryaq-sess')||'null');restoring=!!(LIVE&&s0&&s0.t&&Date.now()-s0.ts<1800000)}catch(e){}
   addEventListener('hashchange',route);
   route();
   if(LIVE){
@@ -1113,11 +1115,12 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
     try{
       var ss=JSON.parse(localStorage.getItem(SESSK)||'null');
       if(ss&&ss.t&&Date.now()-ss.ts<IDLE){
-        $('e-pw').textContent='جارٍ استعادة الجلسة…';KEYV=ss.t;
+        KEYV=ss.t;
         api('adminData').then(function(r){
-          if(r&&r.ok){loadAdmin(r);authed=true;sessTouch();$('e-pw').textContent='';route()}
-          else{KEYV='';try{localStorage.removeItem(SESSK)}catch(e){}$('e-pw').textContent=''}
-        }).catch(function(){KEYV='';$('e-pw').textContent='تعذّر استعادة الجلسة، أدخل كلمة السر'});
+          restoring=false;
+          if(r&&r.ok){loadAdmin(r);authed=true;sessTouch();route()}
+          else{KEYV='';try{localStorage.removeItem(SESSK)}catch(e){}route()}
+        }).catch(function(){restoring=false;KEYV='';route();$('e-pw').textContent='تعذّر استعادة الجلسة، أدخل كلمة السر'});
       }
     }catch(e){}
     ['pointerdown','keydown','touchstart'].forEach(function(ev){addEventListener(ev,sessTouch,{passive:true})});

@@ -260,7 +260,7 @@ body[data-view="home"] #shint{display:none}
 .gal-dots button{position:relative;width:9px;height:9px;border-radius:50%;border:0;padding:0;background:rgba(255,255,255,.5);cursor:pointer}
 .gal-dots button::after{content:'';position:absolute;inset:-9px}
 .gal-dots button.on{background:#fff}
-.gal-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:34px;height:34px;border-radius:50%;border:0;background:rgba(0,0,0,.4);color:#fff;font-size:22px;line-height:32px;padding:0;cursor:pointer}
+.gal-nav{direction:ltr;unicode-bidi:isolate;position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:34px;height:34px;border-radius:50%;border:0;background:rgba(0,0,0,.4);color:#fff;font-size:22px;line-height:32px;padding:0;cursor:pointer}
 .gal-l{left:8px}.gal-r{right:8px}
 .ptr{position:fixed;top:-50px;left:50%;transform:translateX(-50%);z-index:90;padding:8px 16px;border-radius:20px;background:rgba(15,25,15,.92);color:#fff;font-size:13px;pointer-events:none;transition:top .18s}
 
@@ -278,12 +278,13 @@ body[data-view="home"] #shint{display:none}
 .backbtn{flex:none;margin-inline-start:auto;padding:8px 14px;border-radius:999px;border:1px solid var(--glass-line);background:var(--glass);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
 @keyframes ring{0%{box-shadow:0 0 0 0 rgba(240,196,106,.55);transform:scale(1)}15%{transform:scale(1.05)}60%{box-shadow:0 0 0 16px rgba(240,196,106,0)}100%{box-shadow:0 0 0 0 rgba(240,196,106,0);transform:scale(1)}}
 .buybar .btn{animation:ring 2s ease-out infinite}
-body.typing .buybar{display:none!important}
+body.ordered .buybar{display:none!important}
+body.booting .view,body.booting #intro{visibility:hidden!important}
 @media (min-width:821px){body[data-area="shop"][data-view="product"] .buybar{display:flex;left:50%;right:auto;transform:translateX(-50%);width:min(420px,92vw)}}
 @media (prefers-reduced-motion:reduce){.buybar .btn{animation:none}}
 </style>
 </head>
-<body data-area="shop" data-view="home">
+<body class="booting" data-area="shop" data-view="home">
 <div id="valley" aria-hidden="true"></div>
 
 <!-- ============ SHOP ============ -->
@@ -547,7 +548,7 @@ body.typing .buybar{display:none!important}
     });
   }
   function renderProduct(i,keep){
-    var p=S.products[i],box=$('pbox');box.innerHTML='';
+    var p=S.products[i],box=$('pbox');box.innerHTML='';if(!keep)document.body.classList.remove('ordered');
     if(!p||(!p.visible&&!editing)){
       var nf=h('div','glass panel rise');nf.style.setProperty('--i','0');
       nf.appendChild(h('h2',null,'هذا المنتج غير متاح'));var a0=h('a','btn','العودة إلى المتجر');a0.href='#store';a0.style.marginTop='12px';nf.appendChild(a0);box.appendChild(nf);
@@ -628,6 +629,7 @@ body.typing .buybar{display:none!important}
       if(!ok){var bad=document.querySelector('#form [aria-invalid="true"]');if(bad)bad.focus();return}
       var ship=shipType(),c=calcWith(S.delivery,p,cur.qty,w,ship);
       function finish(o){
+        document.body.classList.add('ordered');
       var dn=$('done');dn.innerHTML='';dn.appendChild(h('h3',null,'وصلنا طلبك '+o.id));
       dn.appendChild(h('p',null,'سنتصل بك على '+o.phone+' لتأكيد الطلب. المبلغ المطلوب عند الاستلام: '+fmt(o.total)+'.'));
       var go2=h('a','btn ghost sm','تابع التسوق');go2.href='#store';go2.style.marginTop='12px';dn.appendChild(go2);
@@ -650,7 +652,14 @@ body.typing .buybar{display:none!important}
     });
     $('bb-name').textContent=p.name;$('bb-price').textContent=fmt(p.price);
     $('bb-btn').disabled=p.stock<=0;
-    $('bb-btn').onclick=function(){var f=$('f-name'),a=$('order-anchor');if(!f){if(a)a.scrollIntoView({behavior:'smooth'});return}f.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(function(){try{f.focus({preventScroll:true})}catch(x){f.focus()}},450)};
+    $('bb-btn').onclick=function(){
+      var ids=['f-name','f-phone','f-wilaya','f-commune'],t=null;
+      for(var q=0;q<ids.length;q++){var e=$(ids[q]);if(e&&!String(e.value||'').trim()){t=e;break}}
+      if(!t)t=$('f-submit')||$('f-name');
+      if(!t){var a=$('order-anchor');if(a)a.scrollIntoView({behavior:'smooth'});return}
+      t.scrollIntoView({behavior:'smooth',block:'center'});
+      setTimeout(function(){try{t.focus({preventScroll:true})}catch(x){t.focus()}},450);
+    };
     upd();applyContent();refreshEditable();
     if(!keep)pixelEv('ViewContent',p.name);
   }
@@ -827,8 +836,6 @@ body.typing .buybar{display:none!important}
     var b=e.target.closest&&e.target.closest('[data-back]');if(!b)return;
     if(stk.length>1)history.back();else location.hash=(document.body.getAttribute('data-view')==='product')?'#store':'#home';
   });
-  document.addEventListener('focusin',function(e){if(e.target.matches&&e.target.matches('input,textarea,select'))document.body.classList.add('typing')});
-  document.addEventListener('focusout',function(){document.body.classList.remove('typing')});
 
   (function(){
     var ind=document.createElement('div');ind.className='ptr';ind.textContent='اسحب للتحديث';document.body.appendChild(ind);
@@ -858,14 +865,16 @@ body.typing .buybar{display:none!important}
       if(c.content)S.content=c.content;
       if(c.theme)S.theme=c.theme;
       [['settings'],['delivery'],['pixel']].forEach(function(k){var v=c[k[0]];if(v)for(var q in v)S[k[0]][q]=v[q]});
-      applyContent();route();
+      applyContent();route();bootDone();
     }).catch(function(){
       var d=document.createElement('div');d.textContent='تعذّر تحميل المنتجات. تحقق من الاتصال ثم أعد تحميل الصفحة.';
       d.style.cssText='position:fixed;top:12px;left:12px;right:12px;z-index:50;padding:12px 16px;border-radius:10px;background:rgba(40,10,10,.9);color:#fff;text-align:center;font-size:14px';
-      document.body.appendChild(d);applyContent();route();
+      document.body.appendChild(d);applyContent();route();bootDone();
     });
   }
-  if(LIVE)loadCatalog();else{applyContent();route()}
+  function bootDone(){document.body.classList.remove('booting')}
+  setTimeout(bootDone,7000);
+  if(LIVE)loadCatalog();else{applyContent();route();bootDone()}
 
   /* ================= BACKGROUND (WebGL) ================= */
   function fail(){$('valley').style.backgroundImage='url('+IMG+')';loader.classList.add('gone')}
