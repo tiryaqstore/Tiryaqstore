@@ -250,6 +250,26 @@ body[data-view="home"] #shint{display:none}
 
 .pimg{padding:8px;overflow:hidden}
 .pimg img{display:block;width:100%;height:auto;border-radius:14px}
+
+.gal{position:relative;width:100%;height:100%;overflow:hidden}
+.gal img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .9s ease}
+.gal img.on{opacity:1}
+.gal-dots{position:absolute;bottom:10px;left:0;right:0;display:flex;justify-content:center;gap:6px;z-index:2}
+.gal-dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.45)}
+.gal-dots i.on{background:#fff}
+.ptr{position:fixed;top:-50px;left:50%;transform:translateX(-50%);z-index:90;padding:8px 16px;border-radius:20px;background:rgba(15,25,15,.92);color:#fff;font-size:13px;pointer-events:none;transition:top .18s}
+
+.card.hasimg{min-height:300px;justify-content:flex-end}
+.card.hasimg .pic{position:absolute;inset:0;height:auto;display:block;background:none}
+.card.hasimg .pic img{width:100%;height:100%;object-fit:cover;border-radius:0}
+.card.hasimg .body{position:relative;z-index:1;margin-top:auto;padding:80px 16px 16px;background:linear-gradient(to top,rgba(6,12,7,.97) 0%,rgba(6,12,7,.85) 40%,rgba(6,12,7,0) 100%)}
+.card.hasimg h3,.card.hasimg .price{color:#fff}
+.ppic.hasimg{display:block;position:relative;min-height:0;aspect-ratio:1/1;max-height:560px;padding:0;overflow:hidden}
+.ppic .gal{position:absolute;inset:0}
+.ppic .gal img{max-height:none;max-width:none;border-radius:0}
+.backbtn{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:12px;z-index:6;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(10,16,10,.55);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#fff;font:inherit;font-size:14px;cursor:pointer}
+body[data-view="home"] .backbtn,body.editing .backbtn{display:none}
+@media (max-width:820px){.view.on .glass{-webkit-backdrop-filter:blur(12px) saturate(1.2);backdrop-filter:blur(12px) saturate(1.2)}}
 </style>
 </head>
 <body data-area="shop" data-view="home">
@@ -486,7 +506,7 @@ body[data-view="home"] #shint{display:none}
     var g=$('grid');g.innerHTML='';
     S.products.forEach(function(p,i){
       if(!p.visible&&!editing)return;
-      var a=h('a','card glass rise'+(p.visible?'':' ghost'));a.href='#p-'+encodeURIComponent(p.id);a.style.setProperty('--i',String(6+i));
+      var a=h('a','card glass rise'+(p.visible?'':' ghost')+(safeImg(p.img)?' hasimg':''));a.href='#p-'+encodeURIComponent(p.id);a.style.setProperty('--i',String(6+i));
       var pic=h('div','pic');pic.innerHTML=art(p);
       var body=h('div','body');
       if(p.tag)body.appendChild(h('span','tag',p.tag));
@@ -527,7 +547,7 @@ body[data-view="home"] #shint{display:none}
     var a1=h('a',null,'المتجر');a1.href='#store';bc.appendChild(a1);bc.appendChild(h('span',null,'/'));bc.appendChild(h('span',null,p.name));box.appendChild(bc);
 
     var g=h('div','pgrid');
-    var pic=h('div','glass rise ppic');pic.style.setProperty('--i','1');pic.innerHTML=art(p);
+    var pic=h('div','glass rise ppic');pic.style.setProperty('--i','1');if(imgsOf(p).length){pic.classList.add('hasimg');pic.appendChild(gallery(p))}else pic.innerHTML=art(p);
     var info=h('div','glass rise pinfo');info.style.setProperty('--i','2');
     var t=h('h2','ptitle',p.name);t.setAttribute('data-pedit','name');info.appendChild(t);
     var pr=h('div','pprice');pr.appendChild(h('b',null,fmt(p.price)));if(p.old)pr.appendChild(h('s',null,fmt(p.old)));info.appendChild(pr);
@@ -535,7 +555,7 @@ body[data-view="home"] #shint{display:none}
     var d=h('p','pdesc',p.desc);d.setAttribute('data-pedit','desc');info.appendChild(d);
     var ul=h('ul','pfeat');drawFeatures(ul,p);info.appendChild(ul);
     info.appendChild(btn('+ إضافة ميزة','btn ghost sm add-feat',function(){p.features.push('ميزة جديدة');save();drawFeatures(ul,p);refreshEditable()}));
-    var wrap=h('div');var wa=dedit(h('a','btn ghost','اسأل عن المنتج عبر واتساب'),'wa-t');wa.href=waUrl(S.settings.whatsapp,'السلام عليكم، أريد الاستفسار عن «'+p.name+'»');wa.target='_blank';wa.rel='noopener';wrap.appendChild(wa);markBlock(wrap,'wa-btn');info.appendChild(wrap);
+    var wrap=h('div');var wa=dedit(h('a','btn ghost','اسأل عن المنتج عبر واتساب'),'wa-t');wa.href=waUrl(S.settings.whatsapp,'السلام عليكم ورحمة الله 🌿\nأعجبني منتجكم «'+p.name+'» ✨ وأودّ معرفة المزيد عنه 🤍\n\nهل هو متوفر حاليًا؟ وكيف يمكنني الطلب والتوصيل إلى ولايتي؟ 🚚\nشكرًا لكم مقدّمًا على حسن تعاملكم 🙏');wa.target='_blank';wa.rel='noopener';wrap.appendChild(wa);markBlock(wrap,'wa-btn');info.appendChild(wrap);
     g.appendChild(pic);g.appendChild(info);box.appendChild(g);
 
     var h2=dedit(h('h2','h2 rise','اطلب الآن'),'order-h');h2.id='order-anchor';h2.style.setProperty('--i','3');box.appendChild(h2);
@@ -709,6 +729,20 @@ body[data-view="home"] #shint{display:none}
   ['pointerdown','touchstart','wheel','keydown'].forEach(function(ev){addEventListener(ev,function(){if(bg.view!=='home')shArm()},{passive:true})});
   function dedit(e,k){e.setAttribute('data-edit',k);return e}
   function safeImg(u){return /^(data:image\/jpeg;base64,[A-Za-z0-9+\/=]+|https:\/\/lh3\.googleusercontent\.com\/d\/[A-Za-z0-9_-]{10,80}(=w\d{3,4})?)$/.test(u||'')}
+  function imgsOf(p){var a=(p.imgs&&p.imgs.length)?p.imgs:(p.img?[p.img]:[]);return a.filter(safeImg)}
+  function gallery(p){
+    var im=imgsOf(p),g=h('div','gal');
+    im.forEach(function(u,k){var i=h('img');i.src=u;i.alt='';if(k)i.loading='lazy';if(!k)i.className='on';g.appendChild(i)});
+    if(im.length>1){
+      var dots=h('div','gal-dots');im.forEach(function(u,k){dots.appendChild(h('i',k?'':'on'))});g.appendChild(dots);
+      var n=0,t=setInterval(function(){
+        if(!g.isConnected){clearInterval(t);return}
+        var is=g.querySelectorAll('img'),ds=dots.children;
+        is[n].classList.remove('on');ds[n].classList.remove('on');n=(n+1)%is.length;is[n].classList.add('on');ds[n].classList.add('on');
+      },4000);
+    }
+    return g;
+  }
   function safeUrl(u){return /^(https?:\/\/|tel:|mailto:|#)/.test(u||'')?u:'#store'}
   function drawBlocks(box,p){
     var bl=p.blocks||[];if(!bl.length)return;
@@ -762,7 +796,36 @@ body[data-view="home"] #shint{display:none}
     pixelEv('PageView','#'+(location.hash.replace('#','')||'home'));
   }
   addEventListener('hashchange',route);
-  function normProd(p){p.visible=true;p.old=p.old||'';p.features=p.features||[];p.blocks=p.blocks||[];p.img=p.img||'';return p}
+  /* زر الرجوع */
+  var stk=[location.hash||'#home'];
+  addEventListener('hashchange',function(){var x=location.hash||'#home';if(stk.length>1&&stk[stk.length-2]===x)stk.pop();else stk.push(x)});
+  (function(){
+    var bk=document.createElement('button');bk.type='button';bk.className='backbtn';bk.setAttribute('aria-label','رجوع');bk.textContent='→ رجوع';
+    bk.addEventListener('click',function(){if(stk.length>1)history.back();else location.hash=(document.body.getAttribute('data-view')==='product')?'#store':'#home'});
+    document.body.appendChild(bk);
+  })();
+
+  (function(){
+    var ind=document.createElement('div');ind.className='ptr';ind.textContent='اسحب للتحديث';document.body.appendChild(ind);
+    var y0=0,dy=0,act=false;
+    function scr(el){while(el&&el!==document.documentElement){if(el.scrollHeight>el.clientHeight+2){var o=getComputedStyle(el).overflowY;if(o==='auto'||o==='scroll')return el}el=el.parentElement}return null}
+    addEventListener('touchstart',function(e){
+      act=false;dy=0;if(e.touches.length!==1)return;
+      var t=e.target;if(t.closest&&t.closest('input,textarea,select,[contenteditable],#editbar,.ve-grip,.ve-w,.ve-hh,#ve'))return;
+      if((document.body.getAttribute('data-view')==='home'||document.body.classList.contains('editing')))return;
+      var s=scr(t);if(s&&s.scrollTop>0)return;
+      y0=e.touches[0].clientY;act=true;
+    },{passive:true});
+    addEventListener('touchmove',function(e){
+      if(!act)return;dy=e.touches[0].clientY-y0;
+      if(dy<=0){ind.style.top='-50px';return}
+      ind.style.top=(Math.min(dy*.45,80)-40)+'px';ind.textContent=dy>110?'أفلت للتحديث':'اسحب للتحديث';
+    },{passive:true});
+    function end(){if(act&&dy>110){ind.textContent='جارٍ التحديث…';ind.style.top='20px';location.reload()}else ind.style.top='-50px';act=false;dy=0}
+    addEventListener('touchend',end,{passive:true});addEventListener('touchcancel',end,{passive:true});
+  })();
+
+  function normProd(p){p.visible=true;p.old=p.old||'';p.features=p.features||[];p.blocks=p.blocks||[];p.img=p.img||'';p.imgs=p.imgs||[];return p}
   function loadCatalog(){
     fetch(API_URL+'?action=catalog').then(function(r){return r.json()}).then(function(c){
       if(!c||!c.ok)throw 0;
@@ -790,7 +853,7 @@ body[data-view="home"] #shint{display:none}
     try{renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'})}catch(e){fail();return}
     var small=innerWidth<820;
     var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,small?2:1.75));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,small?1.25:1.6));
     renderer.setClearColor(0x0b1510,1);
     $('valley').appendChild(renderer.domElement);
     var scene=new THREE.Scene(),cam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
@@ -887,7 +950,7 @@ body[data-view="home"] #shint{display:none}
     addEventListener('pointerup',up);addEventListener('pointercancel',up);
     document.addEventListener('mouseleave',function(){mt.set(9,9);tilt.set(0,0)});
 
-    var time=0,last=performance.now(),frames=0,shown=false,drift=reduce?.008:.018;
+    var lastR=0,time=0,last=performance.now(),frames=0,shown=false,drift=reduce?.008:.018;
     function frame(now){
       requestAnimationFrame(frame);
       var dt=Math.min((now-last)/1000,.05);last=now;
@@ -902,6 +965,9 @@ body[data-view="home"] #shint{display:none}
       m.lerp(mt,Math.min(1,dt*6));tiltS.lerp(tilt,Math.min(1,dt*2.5));
       U.uMouse.value.copy(m);U.uTilt.value.copy(tiltS);
       U.uTime.value=time;U.uSpeed.value=Math.min(1,speed);
+      if(document.hidden)return;
+      if(small&&now-lastR<32)return;
+      lastR=now;
       renderer.render(scene,cam);
       frames++;
       if(frames===12&&!shown){shown=true;loader.classList.add('gone')}
