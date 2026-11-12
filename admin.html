@@ -484,7 +484,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
   var SESSK='tiryaq-sess',IDLE=1800000,lastAct=Date.now(),lastW=0;
   function sessStart(){lastAct=Date.now();lastW=lastAct;try{localStorage.setItem(SESSK,JSON.stringify({t:KEYV,ts:lastAct}))}catch(e){}}
   function sessTouch(){lastAct=Date.now();if(KEYV&&lastAct-lastW>10000){lastW=lastAct;try{localStorage.setItem(SESSK,JSON.stringify({t:KEYV,ts:lastAct}))}catch(e){}}}
-  function doLogout(m){authed=false;KEYV='';try{localStorage.removeItem(SESSK)}catch(e){}var e=document.getElementById('e-pw');if(e)e.textContent=m||'';route()}
+  function doLogout(m){authed=false;KEYV='';try{localStorage.removeItem(SESSK);sessionStorage.removeItem('tiryaq-acache')}catch(e){}var e=document.getElementById('e-pw');if(e)e.textContent=m||'';route()}
 
   function sig(){return JSON.stringify(S.products,function(k,v){return k==='stock0'?undefined:v})}
   function setSt(t,bad){
@@ -505,19 +505,21 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
     syncP=jobs.reduce(function(a,j){return a.then(j)},Promise.resolve()).then(function(){setSt('تم الحفظ ✓');setTimeout(function(){if(!syncP)setSt('')},2500)},function(e){setSt('تعذّر الحفظ: '+((e&&(e.error||e.msg||e.detail))||'تحقق من الاتصال'),true)}).then(function(){syncP=null;if(again){again=false;return runSync()}});
     return syncP;
   }
+  function cacheAdmin(){try{sessionStorage.setItem('tiryaq-acache',JSON.stringify({ts:Date.now(),d:{products:S.products,orders:S.orders,content:S.content,settings:S.settings,delivery:S.delivery,pixel:S.pixel,tg:S.tg,theme:S.theme,logs:S.logs,tgLog:S.tgLog,secretsSet:secretsSet}}))}catch(e){}}
   function loadAdmin(r){
     S.products=(r.products||[]).map(function(p){p.stock0=p.stock;p.old=p.old||'';p.features=p.features||[];p.blocks=p.blocks||[];p.img=p.img||'';p.imgs=p.imgs||[];return p});
     S.orders=r.orders||[];S.logs=r.logs||[];S.tgLog=r.tgLog||[];secretsSet=r.secretsSet||{};
     CFGK.forEach(function(k){if(r[k]!==undefined&&r[k]!==null)S[k]=r[k]});
     S.settings.blocked=S.settings.blocked||[];S.content=S.content||{texts:{},hidden:{}};S.content.texts=S.content.texts||{};S.content.hidden=S.content.hidden||{};S.theme=S.theme||{};
     synced={};CFGK.forEach(function(k){synced[k]=JSON.stringify(S[k])});synced.products=sig();
-    applyContent();
+    applyContent();cacheAdmin();
   }
   function pullAdmin(redraw){
     return api('adminData').then(function(r){
       if(!r||!r.ok)return;
       S.orders=r.orders||[];S.tgLog=r.tgLog||[];
       (r.products||[]).forEach(function(sp){var l=prodById(sp.id);if(l&&l.stock===l.stock0){l.stock=l.stock0=sp.stock}});
+      cacheAdmin();
       if(redraw)refreshAdminKeep();
     }).catch(function(){});
   }
@@ -581,7 +583,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
     });
     sb.appendChild(h('div','sp'));
     var v=h('a');v.href=STORE_URL;v.appendChild(h('span',null,'عرض المتجر'));sb.appendChild(v);
-    sb.appendChild(btn('تسجيل الخروج','sbl',function(){if(LIVE){api('logout');try{localStorage.removeItem(SESSK)}catch(e){}KEYV=''}authed=false;location.href=STORE_URL}));
+    sb.appendChild(btn('تسجيل الخروج','sbl',function(){if(LIVE){api('logout');try{localStorage.removeItem(SESSK);sessionStorage.removeItem('tiryaq-acache')}catch(e){}KEYV=''}authed=false;location.href=STORE_URL}));
   }
   function pageHead(m,title,desc){var d=h('div','ah');d.appendChild(h('h1',null,title));d.appendChild(h('p',null,desc));m.appendChild(d)}
   function panel(title,tag){var p=h('div','ap');if(title){var t=h('h3','ap-t',title);if(tag)t.appendChild(h('span','demo',tag));p.appendChild(t)}return p}
@@ -1081,10 +1083,11 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
     var m=/^admin-(home|orders|products|storeedit|delivery|pixel|telegram|editor|settings)$/.exec(x);
     adminCur=m?m[1]:'home';bg.area='admin';
     document.body.setAttribute('data-area','admin');
-    $('adm-gate').hidden=authed||restoring;$('adm-shell').hidden=!authed;
+    $('adm-gate').hidden=authed||restoring;$('adm-shell').hidden=!(authed||restoring);
     var s=SECS.filter(function(z){return z[0]===adminCur})[0];
     document.title=S.settings.storeName+' · '+(authed?s[1]:'لوحة الإدارة');
     if(authed){drawSidebar();runAdmin()}
+    else if(restoring){drawSidebar();$('adm-main').innerHTML='<div class="amw"><p class="note">جارٍ تحميل البيانات…</p></div>'}
   }
 
   (function(){
@@ -1106,8 +1109,16 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
     function end(){if(act&&dy>110){ind.textContent='جارٍ التحديث…';ind.style.top='20px';location.reload()}else ind.style.top='-50px';act=false;dy=0}
     addEventListener('touchend',end,{passive:true});addEventListener('touchcancel',end,{passive:true});
   })();
-  var restoring=false;
-  try{var s0=JSON.parse(localStorage.getItem('tiryaq-sess')||'null');restoring=!!(LIVE&&s0&&s0.t&&Date.now()-s0.ts<1800000)}catch(e){}
+  var restoring=false,fromCache=false;
+  if(LIVE){S.products=[];S.orders=[];S.logs=[];S.tgLog=[]}
+  try{
+    var s0=JSON.parse(localStorage.getItem('tiryaq-sess')||'null');
+    restoring=!!(LIVE&&s0&&s0.t&&Date.now()-s0.ts<1800000);
+    if(restoring){
+      var ca=JSON.parse(sessionStorage.getItem('tiryaq-acache')||'null');
+      if(ca&&ca.d&&Date.now()-ca.ts<1800000){KEYV=s0.t;loadAdmin(ca.d);authed=true;restoring=false;fromCache=true}
+    }
+  }catch(e){}
   addEventListener('hashchange',route);
   route();
   if(LIVE){
@@ -1118,9 +1129,20 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
         KEYV=ss.t;
         api('adminData').then(function(r){
           restoring=false;
-          if(r&&r.ok){loadAdmin(r);authed=true;sessTouch();route()}
+          if(r&&r.ok){
+            if(authed){
+              if(!syncT&&!syncP&&!Object.keys(noteT).length){
+                var a=document.activeElement;
+                if(!(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.isContentEditable))){
+                  var b4=JSON.stringify([S.products,S.orders,S.content,S.settings,S.delivery,S.pixel,S.tg,S.theme]);
+                  loadAdmin(r);
+                  if(JSON.stringify([S.products,S.orders,S.content,S.settings,S.delivery,S.pixel,S.tg,S.theme])!==b4)refreshAdminKeep();
+                }
+              }
+            }else{loadAdmin(r);authed=true;sessTouch();route()}
+          }else if(authed){doLogout('انتهت الجلسة. أدخل كلمة السر.')}
           else{KEYV='';try{localStorage.removeItem(SESSK)}catch(e){}route()}
-        }).catch(function(){restoring=false;KEYV='';route();$('e-pw').textContent='تعذّر استعادة الجلسة، أدخل كلمة السر'});
+        }).catch(function(){if(!authed){restoring=false;KEYV='';route();$('e-pw').textContent='تعذّر استعادة الجلسة، أدخل كلمة السر'}});
       }
     }catch(e){}
     ['pointerdown','keydown','touchstart'].forEach(function(ev){addEventListener(ev,sessTouch,{passive:true})});
