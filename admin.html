@@ -366,13 +366,15 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
 .ve-card.hasimg::after{content:'';position:absolute;left:0;right:0;bottom:0;height:75%;background:linear-gradient(to top,rgba(6,12,7,.96),rgba(6,12,7,.65) 55%,rgba(6,12,7,0));z-index:0;pointer-events:none}
 .ve-card.hasimg b,.ve-card.hasimg .note{position:relative;z-index:1;width:100%;padding:0 10px;color:#fff}
 .ve-card.hasimg .note{padding-bottom:10px;color:#e6e6e6}
-.ve-pv.hasimg{display:block;position:relative;min-height:0;aspect-ratio:1/1;max-height:420px;padding:0;overflow:hidden;border-radius:14px}
+.ve-pv.hasimg{display:block;position:relative;min-height:0;aspect-ratio:1/1;max-height:75vh;padding:0;overflow:hidden;border-radius:14px}
 .ve-pv .gal img{max-width:none;max-height:none;border-radius:0}
 .ve-thumbs{display:flex;flex-wrap:wrap;gap:8px;width:100%}
 .ve-th{position:relative;width:64px;height:64px;border-radius:10px;overflow:hidden;border:1px solid var(--field-line)}
 .ve-th img{width:100%;height:100%;object-fit:cover}
 .ve-thx,.ve-thf{position:absolute;top:2px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:14px;line-height:22px;padding:0;cursor:pointer}
 .ve-thx{right:2px}.ve-thf{left:2px;color:#f0c46a}
+.chat-row{display:grid;grid-template-columns:1.2fr 1fr auto;gap:8px;margin-bottom:8px;align-items:center}
+@media (max-width:560px){.chat-row{grid-template-columns:1fr}}
 </style>
 </head>
 <body data-area="admin">
@@ -452,7 +454,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
       settings:{storeName:'ترياق',phone:'0555 12 34 56',whatsapp:'0555123456',dupAlert:true,blocked:['0550000000'],lowStock:5},
       delivery:{carrier:'Yalidine',autoSend:false,freeOver:8000,rates:{n_home:600,n_desk:400,s_home:900,s_desk:700}},
       pixel:{id:'',test:'',events:{PageView:true,ViewContent:true,InitiateCheckout:true,Purchase:true}},
-      tg:{chat:''},orders:[],seq:1000,logs:[],tgLog:[]};
+      tg:{chat:'',chats:[]},orders:[],seq:1000,logs:[],tgLog:[]};
     var seeds=[
       [991,'كمال زروقي','0551 11 22 33',16,'حيدرة','home','nigella',1,'s',6,2],
       [992,'ليلى مهدي','0662 44 55 66',31,'السانيا','desk','sidr',1,'s',6,1],
@@ -511,6 +513,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
     S.orders=r.orders||[];S.logs=r.logs||[];S.tgLog=r.tgLog||[];secretsSet=r.secretsSet||{};
     CFGK.forEach(function(k){if(r[k]!==undefined&&r[k]!==null)S[k]=r[k]});
     S.settings.blocked=S.settings.blocked||[];S.content=S.content||{texts:{},hidden:{}};S.content.texts=S.content.texts||{};S.content.hidden=S.content.hidden||{};S.theme=S.theme||{};
+    S.tg=S.tg||{};S.tg.chats=Array.isArray(S.tg.chats)?S.tg.chats:[];if(S.tg.chat){if(!S.tg.chats.some(function(c){return c.id===S.tg.chat}))S.tg.chats.push({id:S.tg.chat,name:''});S.tg.chat=''}
     synced={};CFGK.forEach(function(k){synced[k]=JSON.stringify(S[k])});synced.products=sig();
     applyContent();cacheAdmin();
   }
@@ -540,7 +543,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
       if(!w||!w.ok){msg(out,(w&&(w.msg||w.error))||'تعذّر ربط الأزرار',true);throw 0}
       return api('testTelegram');
     }).then(function(t){
-      if(t&&t.ok){msg(out,'وصلت الرسالة التجريبية وفُعّلت أزرار التأكيد والإلغاء ✓');return pullAdmin(false)}
+      if(t&&t.ok){msg(out,(t.msg||'وصلت الرسالة التجريبية')+' · فُعّلت أزرار التأكيد والإلغاء ✓');return pullAdmin(false)}
       msg(out,(t&&(t.msg||t.error))||'فشل الإرسال',true);
     }).catch(function(e){if(e!==0)msg(out,'تعذّر الاتصال بالخادم',true)});
   }
@@ -758,7 +761,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
   function imgsOf(p){var a=(p.imgs&&p.imgs.length)?p.imgs:(p.img?[p.img]:[]);return a.filter(safeImg)}
   function gallery(p){
     var im=imgsOf(p),g=h('div','gal');
-    im.forEach(function(u,k){var i=h('img');i.src=u;i.alt='';i.draggable=false;if(k)i.loading='lazy';if(!k)i.className='on';g.appendChild(i)});
+    im.forEach(function(u,k){var i=h('img');if(!k)i.addEventListener('load',function(){var r=i.naturalWidth/i.naturalHeight,pn=g.parentNode;if(r>0&&pn&&pn.classList&&(pn.classList.contains('ppic')||pn.classList.contains('ve-pv')))pn.style.aspectRatio=String(Math.min(1.5,Math.max(.8,r)))});i.src=u;i.alt='';i.draggable=false;if(k)i.loading='lazy';if(!k)i.className='on';g.appendChild(i)});
     if(im.length>1){
       var dots=h('div','gal-dots'),n=0,t=0;
       function go(k){var is=g.querySelectorAll('img'),ds=dots.children;is[n].classList.remove('on');ds[n].classList.remove('on');n=(k+is.length)%is.length;is[n].classList.add('on');ds[n].classList.add('on')}
@@ -991,8 +994,22 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
   function adminTelegram(w){
     var p=panel('ربط البوت','محاكاة');
     var bt=inp('t-bot','password',secrets.bot,phSec('bot','Bot Token'));bt.setAttribute('dir','ltr');bt.autocomplete='off';bt.addEventListener('input',function(){secrets.bot=bt.value});bt.addEventListener('change',function(){secSave(bt,'TG_BOT','bot')});
-    var ch=inp('t-chat','text',S.tg.chat,'Chat ID');ch.setAttribute('dir','ltr');ch.addEventListener('input',function(){S.tg.chat=ch.value;save()});
-    var g=h('div','g2');g.appendChild(fld('Bot Token',bt,(LIVE?'يُرسل إلى الخادم ويُخزَّن هناك، ولا يُعرض هنا مرة أخرى.':'مخفي ولا يُحفظ في المتصفح. لا تدخل token حقيقيًا في هذا العرض.')));g.appendChild(fld('Chat ID',ch));p.appendChild(g);
+    S.tg.chats=Array.isArray(S.tg.chats)?S.tg.chats:[];if(S.tg.chat){if(!S.tg.chats.some(function(c){return c.id===S.tg.chat}))S.tg.chats.push({id:S.tg.chat,name:''});S.tg.chat=''}
+    var g=h('div','g2');g.appendChild(fld('Bot Token',bt,(LIVE?'يُرسل إلى الخادم ويُخزَّن هناك، ولا يُعرض هنا مرة أخرى.':'مخفي ولا يُحفظ في المتصفح. لا تدخل token حقيقيًا في هذا العرض.')));p.appendChild(g);
+    var cl=h('div','chats');
+    function drawChats(){
+      cl.innerHTML='';
+      S.tg.chats.forEach(function(c,k){
+        var row=h('div','chat-row');
+        var id=inp('t-chat-'+k,'text',c.id,'Chat ID');id.setAttribute('dir','ltr');id.addEventListener('input',function(){c.id=id.value.trim();save()});
+        var nm=inp('t-chn-'+k,'text',c.name||'','الاسم (اختياري)');nm.addEventListener('input',function(){c.name=nm.value;save()});
+        var rm=btn('حذف','btn danger sm',function(){S.tg.chats.splice(k,1);save();drawChats()});
+        row.appendChild(id);row.appendChild(nm);row.appendChild(rm);cl.appendChild(row);
+      });
+      if(S.tg.chats.length<10)cl.appendChild(btn('+ إضافة حساب تيليجرام','btn ghost sm',function(){S.tg.chats.push({id:'',name:''});drawChats()}));
+    }
+    drawChats();
+    p.appendChild(fld('حسابات استلام الإشعارات',cl,'يصل إشعار كل طلب إلى كل الحسابات هنا، ويستطيع أي منها تأكيد الطلب أو إلغاءه. يجب أن يضغط كل شخص Start على البوت أولًا. لمعرفة رقمه: يراسل البوت @userinfobot على تيليجرام.'));
     var out=h('span','note');
     p.appendChild(btn('إرسال رسالة تجريبية','btn sm',function(){if(LIVE){tgLive(out);return}S.tgLog.unshift({k:'test',ts:Date.now()});save();refreshAdminKeep()}));p.appendChild(out);w.appendChild(p);
     var lg=panel('سجل الرسائل');var box=h('div','list');box.style.maxHeight='none';
