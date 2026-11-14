@@ -339,6 +339,9 @@ body.booting .view,body.booting #intro{visibility:hidden!important}
 <div id="editbar"><span>وضع التحرير المباشر: انقر على أي نص لتعديله، واستعمل ✕ لإخفاء العناصر.</span><button class="btn sm" id="eb-save" type="button">حفظ وخروج</button><button class="btn ghost sm" id="eb-cancel" type="button">إلغاء التعديلات</button></div>
 <div id="shint" aria-hidden="true"><span>انزل للأسفل</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
 <div class="loader" id="loader"><span></span></div>
+<script>/* يبدأ تحميل المنتجات والإعدادات فورًا دون انتظار three.js. يجب أن يطابق الرابط ثابت API_URL أدناه */
+window.__API='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6WM_sfd73gtz9FgcHeTExTQ6otRp4EM1oGhPb_bLq29xA/exec';try{window.__catP=fetch(window.__API+'?action=catalog').then(function(r){return r.json()}).catch(function(){return null})}catch(e){}
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function(){
@@ -363,6 +366,16 @@ body.booting .view,body.booting #intro{visibility:hidden!important}
   function timeStr(ts){var d=new Date(ts);return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds())}
   function dateStr(ts){var d=new Date(ts);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
   function waUrl(n,msg){var d=digits(n);if(d.charAt(0)==='0')d='213'+d.slice(1);return 'https://wa.me/'+d+'?text='+encodeURIComponent(msg)}
+  /* واتساب المتجر: رقم (0555… أو 213555… أو +213…) أو رابط wa.me. يرجع '' إذا لم يكن صالحًا فيُخفى الزر */
+  function waStore(n,msg){
+    var v=String(n||'').trim();if(!v)return '';
+    if(/^https:\/\/(wa\.me|api\.whatsapp\.com|wa\.link|chat\.whatsapp\.com)\/[^\s<>"']+$/i.test(v)){
+      return /^https:\/\/wa\.me\/\d{9,15}\/?$/i.test(v)?v.replace(/\/$/,'')+'?text='+encodeURIComponent(msg):v;
+    }
+    if(/^https?:/i.test(v))return '';
+    var d=digits(v).replace(/^00/,'');if(d.charAt(0)==='0')d='213'+d.slice(1);
+    return /^\d{9,15}$/.test(d)?'https://wa.me/'+d+'?text='+encodeURIComponent(msg):'';
+  }
   function btn(t,c,fn){var b=h('button',c,t);b.type='button';b.addEventListener('click',fn);return b}
 
   /* price, 10% discount from 2 pieces, free delivery over a threshold */
@@ -389,7 +402,7 @@ body.booting .view,body.booting #intro{visibility:hidden!important}
           desc:'خلطة جاهزة من العسل الطبيعي والحبة السوداء المطحونة.',features:['خلطة جاهزة','جرة 350 غ','بدون سكر مضاف']}
       ],
       content:{texts:{},hidden:{}},
-      settings:{storeName:'ترياق',phone:'0555 12 34 56',whatsapp:'0555123456',dupAlert:true,blocked:['0550000000'],lowStock:5},
+      settings:{storeName:'ترياق',phone:'0555 12 34 56',whatsapp:'',dupAlert:true,blocked:['0550000000'],lowStock:5},
       delivery:{carrier:'Yalidine',autoSend:false,freeOver:8000,rates:{n_home:600,n_desk:400,s_home:900,s_desk:700}},
       pixel:{id:'',test:'',events:{PageView:true,ViewContent:true,InitiateCheckout:true,Purchase:true}},
       tg:{chat:''},orders:[],seq:1000,logs:[],tgLog:[]};
@@ -427,13 +440,34 @@ body.booting .view,body.booting #intro{visibility:hidden!important}
 
   var editing=false,authed=false,snap=null,adminCur='home';
 
-  /* ================= PIXEL LOG (never cleared) ================= */
-  function pixelEv(ev,info,force){
-    if(!force&&!S.pixel.events[ev])return;
-    S.logs.unshift({ts:Date.now(),ev:ev,info:info||'',test:!!force});
-    if(S.logs.length>200)S.logs.length=200;
-    save();
-    if(bg.area==='admin'&&adminCur==='pixel')drawPixelLog();
+  /* ================= PIXEL (Meta) ================= */
+  var pvPend=null;
+  function pxOn(ev){var e=S.pixel&&S.pixel.events;if(!S.pixel||!/^\d{8,20}$/.test(S.pixel.id||''))return false;return ev==='Lead'?(!e||e.Lead!==false):!!(e&&e[ev])}
+  function pxBoot(){
+    if(!LIVE||window.fbq||!/^\d{8,20}$/.test(S.pixel.id||''))return;
+    var n=window.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!window._fbq)window._fbq=n;n.push=n;n.loaded=true;n.version='2.0';n.queue=[];
+    n('init',S.pixel.id);
+    var go=function(){if(window.__fbGo)return;window.__fbGo=1;var sc=document.createElement('script');sc.async=true;sc.src='https://connect.facebook.net/en_US/fbevents.js';document.head.appendChild(sc)};
+    /* لا ننتظر الغابة ثلاثية الأبعاد: فزائر الإعلان الذي يغادر بسرعة يجب أن يُحسب أيضًا */
+    if(window.requestIdleCallback)requestIdleCallback(go,{timeout:1200});else setTimeout(go,400);
+    setTimeout(go,1500);
+  }
+  function ck(n){var m=document.cookie.match(new RegExp('(?:^|; )'+n+'=([^;]*)'));return m?decodeURIComponent(m[1]):''}
+  (function(){try{var m=/[?&]fbclid=([^&#]+)/.exec(location.search);if(m)localStorage.setItem('tiryaq-fbc','fb.1.'+Date.now()+'.'+decodeURIComponent(m[1]))}catch(e){}})();
+  function trk(){var c=ck('_fbc');if(!c){try{c=localStorage.getItem('tiryaq-fbc')||''}catch(e){}}return {fbp:ck('_fbp'),fbc:c,ua:navigator.userAgent.slice(0,300),url:location.origin+location.pathname}}
+  function pixelEv(ev,info,force,data,eid){
+    if(!LIVE){
+      if(!force&&!S.pixel.events[ev])return;
+      S.logs.unshift({ts:Date.now(),ev:ev,info:info||'',test:!!force});
+      if(S.logs.length>200)S.logs.length=200;
+      save();return;
+    }
+    if(ev==='PageView'&&!(S.pixel&&S.pixel.id))pvPend=info||'';
+    if(ev==='PageView'){var nw=Date.now(),key=location.hash;if(pixelEv.lk===key&&nw-pixelEv.lt<3000)return;pixelEv.lk=key;pixelEv.lt=nw}
+    if(!pxOn(ev))return;
+    pxBoot();
+    try{if(eid)fbq('track',ev,data||{},{eventID:eid});else fbq('track',ev,data||{})}catch(e){}
   }
   /* ================= PRODUCT ART ================= */
   function art(p){
@@ -512,9 +546,8 @@ body.booting .view,body.booting #intro{visibility:hidden!important}
     box.innerHTML='';
     var b=h('b',null,S.settings.storeName);box.appendChild(b);
     var l1=h('div','blk');l1.appendChild(h('span',null,'منتجاتنا مكمّلات غذائية طبيعية وليست أدوية، ولا تغني عن استشارة الطبيب.'));l1.firstChild.setAttribute('data-edit','foot-1-t');markBlock(l1,'foot-1');
-    var l2=h('div','blk');l2.appendChild(h('span',null,'الأسماء والأسعار والصور في هذه الصفحة أمثلة للعرض فقط.'));l2.firstChild.setAttribute('data-edit','foot-2-t');markBlock(l2,'foot-2');
     
-    box.appendChild(l1);box.appendChild(l2);
+    box.appendChild(l1);
   }
   function renderStore(){
     var g=$('grid');g.innerHTML='';
@@ -569,12 +602,13 @@ body.booting .view,body.booting #intro{visibility:hidden!important}
     var d=h('p','pdesc',p.desc);d.setAttribute('data-pedit','desc');info.appendChild(d);
     var ul=h('ul','pfeat');drawFeatures(ul,p);info.appendChild(ul);
     info.appendChild(btn('+ إضافة ميزة','btn ghost sm add-feat',function(){p.features.push('ميزة جديدة');save();drawFeatures(ul,p);refreshEditable()}));
-    var wrap=h('div');var wa=dedit(h('a','btn ghost','اسأل عن المنتج عبر واتساب'),'wa-t');wa.href=waUrl(S.settings.whatsapp,'السلام عليكم ورحمة الله 🌿\nأعجبني منتجكم «'+p.name+'» ✨ وأودّ معرفة المزيد عنه 🤍\n\nهل هو متوفر حاليًا؟ وكيف يمكنني الطلب والتوصيل إلى ولايتي؟ 🚚\nشكرًا لكم مقدّمًا على حسن تعاملكم 🙏');wa.target='_blank';wa.rel='noopener';wrap.appendChild(wa);markBlock(wrap,'wa-btn');info.appendChild(wrap);
+    var wrap=h('div');var wa=dedit(h('a','btn ghost','اسأل عن المنتج عبر واتساب'),'wa-t');var wu=waStore(S.settings.whatsapp,'السلام عليكم ورحمة الله 🌿\nأعجبني منتجكم «'+p.name+'» ✨ وأودّ معرفة المزيد عنه 🤍\n\nهل هو متوفر حاليًا؟ وكيف يمكنني الطلب والتوصيل إلى ولايتي؟ 🚚\nشكرًا لكم مقدّمًا على حسن تعاملكم 🙏');if(wu){wa.href=wu;wa.target='_blank';wa.rel='noopener';wrap.appendChild(wa);markBlock(wrap,'wa-btn');info.appendChild(wrap)}
     g.appendChild(pic);g.appendChild(info);box.appendChild(g);
 
     var h2=dedit(h('h2','h2 rise','اطلب الآن'),'order-h');h2.id='order-anchor';h2.style.setProperty('--i','3');box.appendChild(h2);
     var ord=h('div','order'),form=h('form','glass panel rise');form.id='form';form.noValidate=true;form.style.setProperty('--i','4');
     form.innerHTML='<div class="fields">'+
+      '<div aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none"><label for="f-fax">اترك هذا الحقل فارغًا</label><input id="f-fax" name="fax" tabindex="-1" autocomplete="off"></div>'+
       '<div class="f"><label for="f-name">الاسم الكامل</label><input id="f-name" autocomplete="name" placeholder="مثال: أمين بن علي"><span class="err" id="e-f-name"></span></div>'+
       '<div class="f"><label for="f-phone">رقم الهاتف</label><input id="f-phone" inputmode="tel" autocomplete="tel" dir="ltr" placeholder="05 55 12 34 56" style="text-align:right"><span class="err" id="e-f-phone"></span></div>'+
       '<div class="f"><label for="f-wilaya">الولاية</label><select id="f-wilaya"></select><span class="err" id="e-f-wilaya"></span></div>'+
@@ -618,7 +652,8 @@ body.booting .view,body.booting #intro{visibility:hidden!important}
     $('q-plus').onclick=function(){if(cur.qty<maxQty()){cur.qty++;upd()}};
     $('q-minus').onclick=function(){if(cur.qty>1){cur.qty--;upd()}};
     ws.onchange=upd;document.querySelectorAll('#form input[name="ship"]').forEach(function(r){r.onchange=upd});
-    form.addEventListener('focusin',function(){if(!cur.started){cur.started=true;pixelEv('InitiateCheckout',p.name)}});
+    var t0=Date.now();
+    form.addEventListener('focusin',function(){if(!cur.started){cur.started=true;pixelEv('InitiateCheckout',p.name,false,{content_ids:[p.id],content_name:p.name,content_type:'product',value:p.price*cur.qty,currency:'DZD',num_items:cur.qty})}});
     if(p.stock<=0){$('f-submit').disabled=true;$('f-submit').textContent='نفد المخزون'}
     form.addEventListener('submit',function(ev){
       ev.preventDefault();
@@ -640,11 +675,14 @@ body.booting .view,body.booting #intro{visibility:hidden!important}
       }
       if(LIVE){
         var sb=$('f-submit'),sl=sb.textContent;sb.disabled=true;sb.textContent='جارٍ إرسال الطلب...';
-        api('order',{name:name,phone:phone,wil:w,commune:com,ship:ship,addr:$('f-addr').value.trim(),pid:p.id,qty:cur.qty}).then(function(r){
+        var eid='lead_'+Date.now().toString(36)+Math.random().toString(36).slice(2,10),tk=trk(),oq=cur.qty;
+        api('order',{name:name,phone:phone,wil:w,commune:com,ship:ship,addr:$('f-addr').value.trim(),pid:p.id,qty:cur.qty,hp:($('f-fax')||{}).value||'',ft:Date.now()-t0,eid:eid,fbp:tk.fbp,fbc:tk.fbc,ua:tk.ua,url:tk.url}).then(function(r){
           sb.disabled=false;sb.textContent=sl;
           if(!r||!r.ok){ve('f-name',(r&&r.error)||'تعذّر إرسال الطلب، حاول مرة أخرى');return}
           p.stock=Math.max(0,p.stock-cur.qty);
           finish({id:r.id,phone:r.phone,total:r.total});
+          pixelEv('Lead',p.name,false,{content_ids:[p.id],content_name:p.name,content_type:'product',value:r.total,currency:'DZD',num_items:oq},eid);
+          if(pxOn('Lead'))try{fetch(API_URL,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'capiLead',key:'',data:{id:r.id}})}).catch(function(){})}catch(e){}
         }).catch(function(){sb.disabled=false;sb.textContent=sl;ve('f-name','تعذّر الاتصال، تحقق من الإنترنت وأعد المحاولة')});
         return;
       }
@@ -663,7 +701,7 @@ body.booting .view,body.booting #intro{visibility:hidden!important}
       setTimeout(function(){try{t.focus({preventScroll:true})}catch(x){t.focus()}},450);
     };
     upd();applyContent();refreshEditable();
-    if(!keep)pixelEv('ViewContent',p.name);
+    if(!keep)pixelEv('ViewContent',p.name,false,{content_ids:[p.id],content_name:p.name,content_type:'product',value:p.price,currency:'DZD'});
   }
   /* ================= SOUND: a quiet forest, no music ================= */
   var ac=null,master=null,lp=null,send=null,dry=null,muted=true,timers=[],soundBtn=$('sound');
@@ -872,13 +910,14 @@ body.booting .view,body.booting #intro{visibility:hidden!important}
     if(c.content)S.content=c.content;
     if(c.theme)S.theme=c.theme;
     [['settings'],['delivery'],['pixel']].forEach(function(k){var v=c[k[0]];if(v)for(var q in v)S[k[0]][q]=v[q]});
+    if(LIVE&&S.pixel.id){if(pvPend!==null){var pi=pvPend;pvPend=null;pixelEv('PageView',pi)}else pxBoot()}
   }
   function formDirty(){var f=$('form');if(!f)return false;if(f.contains(document.activeElement))return true;var d=false;f.querySelectorAll('input,textarea').forEach(function(e){if(e.value)d=true});return d}
   function loadCatalog(){
     var cached=null,cs='';
     try{cs=localStorage.getItem(CATK)||'';cached=cs?JSON.parse(cs):null}catch(e){cached=null}
     if(cached&&cached.ok){applyCat(cached);applyContent();route();bootDone()}else cached=null;
-    fetch(API_URL+'?action=catalog').then(function(r){return r.json()}).then(function(c){
+    (window.__catP&&window.__API===API_URL?window.__catP:fetch(API_URL+'?action=catalog').then(function(r){return r.json()})).then(function(c){
       if(!c||!c.ok)throw 0;
       var ns=JSON.stringify(c);
       try{localStorage.setItem(CATK,ns)}catch(e){}

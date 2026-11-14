@@ -451,7 +451,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
           desc:'خلطة جاهزة من العسل الطبيعي والحبة السوداء المطحونة.',features:['خلطة جاهزة','جرة 350 غ','بدون سكر مضاف']}
       ],
       content:{texts:{},hidden:{}},
-      settings:{storeName:'ترياق',phone:'0555 12 34 56',whatsapp:'0555123456',dupAlert:true,blocked:['0550000000'],lowStock:5},
+      settings:{storeName:'ترياق',phone:'0555 12 34 56',whatsapp:'',dupAlert:true,blocked:['0550000000'],lowStock:5},
       delivery:{carrier:'Yalidine',autoSend:false,freeOver:8000,rates:{n_home:600,n_desk:400,s_home:900,s_desk:700}},
       pixel:{id:'',test:'',events:{PageView:true,ViewContent:true,InitiateCheckout:true,Purchase:true}},
       tg:{chat:'',chats:[]},orders:[],seq:1000,logs:[],tgLog:[]};
@@ -520,7 +520,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
   function pullAdmin(redraw){
     return api('adminData').then(function(r){
       if(!r||!r.ok)return;
-      S.orders=r.orders||[];S.tgLog=r.tgLog||[];
+      S.orders=r.orders||[];S.tgLog=r.tgLog||[];S.logs=r.logs||S.logs;
       (r.products||[]).forEach(function(sp){var l=prodById(sp.id);if(l&&l.stock===l.stock0){l.stock=l.stock0=sp.stock}});
       cacheAdmin();
       if(redraw)refreshAdminKeep();
@@ -534,6 +534,12 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
       if(r&&r.ok){secrets[field]='';el.value='';secretsSet[field]=true;el.placeholder='محفوظ ✓ — اكتب رمزًا جديدًا للاستبدال';setSt('تم حفظ الرمز في الخادم ✓');setTimeout(function(){setSt('')},2500)}
       else setSt('تعذّر حفظ الرمز: '+((r&&(r.msg||r.error))||''),true);
     }).catch(function(){setSt('تعذّر حفظ الرمز',true)});
+  }
+  function pxTestLive(out){
+    out.className='note';out.textContent='جارٍ الإرسال…';
+    var k=secrets.capi.trim();
+    var st=k?api('setSecret',{name:'CAPI_TOKEN',value:k}).then(function(r){if(r&&r.ok){secretsSet.capi=true;secrets.capi=''}}):Promise.resolve();
+    st.then(runSync).then(function(){return api('pixelTest')}).then(function(r){msg(out,(r&&r.msg)||(r&&r.ok?'تم':'فشل'),!(r&&r.ok));return pullAdmin(false)}).then(function(){drawPixelLog()}).catch(function(){msg(out,'تعذّر الاتصال بالخادم',true)});
   }
   function tgLive(out){
     out.textContent='جارٍ الإرسال…';out.className='note';
@@ -556,6 +562,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
 
   /* ================= PIXEL LOG (never cleared) ================= */
   function pixelEv(ev,info,force){
+    if(LIVE)return;
     if(!force&&!S.pixel.events[ev])return;
     S.logs.unshift({ts:Date.now(),ev:ev,info:info||'',test:!!force});
     if(S.logs.length>200)S.logs.length=200;
@@ -612,7 +619,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
       api('setStatus',{id:o.id,status:s}).then(function(r){
         if(!r||!r.ok){setSt('تعذّر التحديث: '+((r&&(r.error||r.msg))||''),true);return pullAdmin(true)}
         o.status=s;setSt('');
-        if(s==='c')pixelEv('Purchase',o.id+' · '+o.total+' DZD');
+        if(s==='c')api('capiPurchase',{id:o.id}).then(function(){return pullAdmin(false)}).then(function(){if(adminCur==='pixel')drawPixelLog()}).catch(function(){});
         return pullAdmin(true).then(refreshAdminKeep);
       }).catch(function(){setSt('تعذّر الاتصال بالخادم',true)});
       return;
@@ -931,7 +938,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
       i.addEventListener('input',function(){var arr=(T.intro||[]).slice();arr[n]=i.value.trim()===d?'':i.value;if(!arr.some(Boolean))delete T.intro;else T.intro=arr;save()});ip.appendChild(fld('الجملة '+(n+1),i))});
     w.appendChild(ip);
     var tp=panel('نصوص المتجر');
-    [['store-intro-t','نص مربع التعريف','مفتاح الحفاظ على صحتك من قلب الطبيعة'],['trust-1-t','الميزة الصغيرة 1','الدفع عند الاستلام'],['trust-2-t','الميزة الصغيرة 2','توصيل إلى 58 ولاية'],['trust-3-t','الميزة الصغيرة 3','خدمة عملاء متوفرة دائمًا'],['store-h2','عنوان قائمة المنتجات','المنتجات'],['nav-home','القائمة: الرئيسية','الرئيسية'],['nav-store','القائمة: المتجر','المتجر'],['order-h','عنوان نموذج الطلب','اطلب الآن'],['order-btn','زر تأكيد الطلب','تأكيد الطلب · الدفع عند الاستلام'],['sum-h','عنوان ملخص الطلب','ملخص الطلب'],['rel-h','عنوان المنتجات الأخرى','منتجات أخرى'],['wa-t','زر واتساب في صفحة المنتج','اسأل عن المنتج عبر واتساب'],['foot-1-t','تنبيه أسفل الصفحة 1','منتجاتنا مكمّلات غذائية طبيعية وليست أدوية، ولا تغني عن استشارة الطبيب.'],['foot-2-t','تنبيه أسفل الصفحة 2','الأسماء والأسعار والصور في هذه الصفحة أمثلة للعرض فقط.']].forEach(function(x){
+    [['store-intro-t','نص مربع التعريف','مفتاح الحفاظ على صحتك من قلب الطبيعة'],['trust-1-t','الميزة الصغيرة 1','الدفع عند الاستلام'],['trust-2-t','الميزة الصغيرة 2','توصيل إلى 58 ولاية'],['trust-3-t','الميزة الصغيرة 3','خدمة عملاء متوفرة دائمًا'],['store-h2','عنوان قائمة المنتجات','المنتجات'],['nav-home','القائمة: الرئيسية','الرئيسية'],['nav-store','القائمة: المتجر','المتجر'],['order-h','عنوان نموذج الطلب','اطلب الآن'],['order-btn','زر تأكيد الطلب','تأكيد الطلب · الدفع عند الاستلام'],['sum-h','عنوان ملخص الطلب','ملخص الطلب'],['rel-h','عنوان المنتجات الأخرى','منتجات أخرى'],['wa-t','زر واتساب في صفحة المنتج','اسأل عن المنتج عبر واتساب'],['foot-1-t','تنبيه أسفل الصفحة 1','منتجاتنا مكمّلات غذائية طبيعية وليست أدوية، ولا تغني عن استشارة الطبيب.']].forEach(function(x){
       var i=inp('se-t-'+x[0],'text',S.content.texts[x[0]]!==undefined?S.content.texts[x[0]]:x[2]);
       i.addEventListener('input',function(){if(i.value===x[2])delete S.content.texts[x[0]];else S.content.texts[x[0]]=i.value;save()});tp.appendChild(fld(x[1],i))});
     w.appendChild(tp);
@@ -977,17 +984,18 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
     S.logs.forEach(function(l){var li=h('li');li.appendChild(h('span',null,new Date(l.ts).toLocaleDateString('en-GB')+' '+timeStr(l.ts)));li.appendChild(h('b',null,l.ev+(l.test?' (تجريبي)':'')));li.appendChild(h('span',null,l.info));pixLogEl.appendChild(li)});
   }
   function adminPixel(w){
-    var p=panel('إعدادات بيكسل ميتا','محاكاة');
+    var p=panel('إعدادات بيكسل ميتا',LIVE?'مباشر':'محاكاة');
     var id=inp('x-id','text',S.pixel.id,'مثال: 123456789012345');id.setAttribute('dir','ltr');id.addEventListener('input',function(){S.pixel.id=id.value;save()});
     var cp=inp('x-capi','password',secrets.capi,phSec('capi','رمز Conversions API'));cp.setAttribute('dir','ltr');cp.autocomplete='off';cp.addEventListener('input',function(){secrets.capi=cp.value});cp.addEventListener('change',function(){secSave(cp,'CAPI_TOKEN','capi')});
     var tc=inp('x-test','text',S.pixel.test,'مثال: TEST12345');tc.setAttribute('dir','ltr');tc.addEventListener('input',function(){S.pixel.test=tc.value;save()});
-    var g=h('div','g3');g.appendChild(fld('Pixel ID',id));g.appendChild(fld('رمز Conversions API',cp,(LIVE?'يُخزَّن في الخادم ولا يُعرض هنا مرة أخرى.':'لا يُحفظ في المتصفح.')));g.appendChild(fld('رمز اختبار الأحداث',tc));p.appendChild(g);w.appendChild(p);
+    var g=h('div','g3');g.appendChild(fld('Pixel ID',id));g.appendChild(fld('رمز Conversions API',cp,(LIVE?'يُخزَّن في الخادم ولا يُعرض هنا مرة أخرى.':'لا يُحفظ في المتصفح.')));g.appendChild(fld('رمز اختبار الأحداث',tc,'يُستعمل مع زر «إرسال حدث تجريبي» فقط، فلا يؤثر على طلباتك الحقيقية.'));p.appendChild(g);w.appendChild(p);
     var ev=panel('الأحداث المفعّلة');var eg=h('div','g2');
-    [['PageView','PageView · فتح صفحة'],['ViewContent','ViewContent · مشاهدة منتج'],['InitiateCheckout','InitiateCheckout · بدء الطلب'],['Purchase','Purchase · تأكيد الطلب']].forEach(function(x){eg.appendChild(sw('ev-'+x[0],!!S.pixel.events[x[0]],x[1],function(v){S.pixel.events[x[0]]=v;save()}))});
+    [['PageView','PageView · فتح صفحة'],['ViewContent','ViewContent · مشاهدة منتج'],['InitiateCheckout','InitiateCheckout · بدء الطلب'],['Lead','Lead · إرسال الطلب (متصفح + خادم)'],['Purchase','Purchase · تأكيد الطلب (من الخادم)']].forEach(function(x){eg.appendChild(sw('ev-'+x[0],(x[0]==='Lead'?S.pixel.events.Lead!==false:!!S.pixel.events[x[0]]),x[1],function(v){S.pixel.events[x[0]]=v;save()}))});
     ev.appendChild(eg);
+    if(LIVE)ev.appendChild(h('p','note','PageView وViewContent وInitiateCheckout تُرسل من متصفح الزائر، وتُحمَّل بعد اكتمال الصفحة حتى لا تبطّئها. Lead يُرسل من المتصفح ومن الخادم معًا بنفس المعرّف فلا يُحسب مرتين، وPurchase يُرسل من الخادم عند تأكيد الطلب.'));
     var out=h('span','note');
-    ev.appendChild(btn('إرسال حدث تجريبي','btn sm',function(){pixelEv('TestEvent',S.pixel.test?'test_event_code '+S.pixel.test:'بدون رمز اختبار',true);msg(out,'أُضيف حدث تجريبي إلى السجل')}));ev.appendChild(out);w.appendChild(ev);
-    var lg=panel('سجل الأحداث','لا يُمسح');pixLogEl=h('ul','log');lg.appendChild(pixLogEl);lg.appendChild(h('p','note','يبقى كل حدث في السجل حتى بعد إغلاق الصفحة (آخر 200 حدث).'));w.appendChild(lg);drawPixelLog();
+    ev.appendChild(btn('إرسال حدث تجريبي','btn sm',function(){if(LIVE){pxTestLive(out);return}pixelEv('TestEvent',S.pixel.test?'test_event_code '+S.pixel.test:'بدون رمز اختبار',true);msg(out,'أُضيف حدث تجريبي إلى السجل')}));ev.appendChild(out);w.appendChild(ev);
+    var lg=panel('سجل الأحداث','لا يُمسح');pixLogEl=h('ul','log');lg.appendChild(pixLogEl);lg.appendChild(h('p','note',(LIVE?'سجل أحداث الخادم (Conversions API): Lead عند إرسال الطلب وPurchase عند التأكيد وأحداث الاختبار. أحداث المتصفح تراها في Meta Pixel Helper أو Events Manager.':'يبقى كل حدث في السجل حتى بعد إغلاق الصفحة (آخر 200 حدث).')));w.appendChild(lg);drawPixelLog();
   }
 
   /* ---- telegram ---- */
@@ -1033,7 +1041,7 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
     p.appendChild(h('p',null,'إظهار العناصر وإخفاؤها يعمل من هنا. التحرير المباشر للنصوص داخل الصفحات يعود في الخطوة 3 مع ربط الخادم.'));
     w.appendChild(p);
     var bl=panel('عناصر الصفحة');var g=h('div','g2');
-    [['hero-cap','وصف الصفحة الرئيسية'],['hero-hint','تلميح التجوّل في الرئيسية'],['store-intro','مقدمة المتجر'],['trust-1','ميزة: الدفع عند الاستلام'],['trust-2','ميزة: تأكيد الطلب بالاتصال'],['trust-3','ميزة: التوصيل إلى 58 ولاية'],['wa-btn','زر واتساب في صفحة المنتج'],['related','قسم «منتجات أخرى»'],['foot-1','تنبيه المكمّلات في الأسفل'],['foot-2','تنبيه الأمثلة في الأسفل'],['foot-admin','رابط دخول الإدارة في الأسفل']].forEach(function(x){
+    [['hero-cap','وصف الصفحة الرئيسية'],['hero-hint','تلميح التجوّل في الرئيسية'],['store-intro','مقدمة المتجر'],['trust-1','ميزة: الدفع عند الاستلام'],['trust-2','ميزة: تأكيد الطلب بالاتصال'],['trust-3','ميزة: التوصيل إلى 58 ولاية'],['wa-btn','زر واتساب في صفحة المنتج'],['related','قسم «منتجات أخرى»'],['foot-1','تنبيه المكمّلات في الأسفل'],['foot-admin','رابط دخول الإدارة في الأسفل']].forEach(function(x){
       g.appendChild(sw('bl-'+x[0],!S.content.hidden[x[0]],x[1],function(v){if(v)delete S.content.hidden[x[0]];else S.content.hidden[x[0]]=true;save();applyContent()}));
     });
     bl.appendChild(g);bl.appendChild(confirmBtn('استعادة النصوص والعناصر الافتراضية','btn danger sm',function(){S.content={texts:{},hidden:{}};save();applyContent();refreshAdminKeep()}));w.appendChild(bl);
@@ -1044,9 +1052,29 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
     var s=S.settings,p=panel('بيانات المتجر');
     var nm=inp('s-name','text',s.storeName);nm.addEventListener('input',function(){s.storeName=nm.value.trim()||'ترياق';save();applyContent();drawSidebar()});
     var ph=inp('s-phone','text',s.phone);ph.setAttribute('dir','ltr');ph.addEventListener('input',function(){s.phone=ph.value;save()});
-    var wa=inp('s-wa','text',s.whatsapp);wa.setAttribute('dir','ltr');wa.addEventListener('input',function(){s.whatsapp=wa.value;save()});
-    var g=h('div','g3');g.appendChild(fld('اسم المتجر',nm));g.appendChild(fld('هاتف المتجر',ph));g.appendChild(fld('رقم واتساب (للأسئلة عن المنتجات)',wa));p.appendChild(g);
+    var wa=inp('s-wa','text',s.whatsapp,'0555123456 أو https://wa.me/213555123456');wa.setAttribute('dir','ltr');
+    var wn=h('span','note');
+    function waCheck(){
+      var v=wa.value.trim(),ok=false,t='';
+      if(!v){t='لا يوجد واتساب: زر واتساب مخفي في صفحة المنتج.'}
+      else if(/^https:\/\/(wa\.me|api\.whatsapp\.com|wa\.link|chat\.whatsapp\.com)\/[^\s<>"']+$/i.test(v)){ok=true;t='سيظهر الزر ويفتح هذا الرابط.'}
+      else if(/^https?:/i.test(v)){t='الرابط غير مقبول. استعمل رابط wa.me أو رقمًا. سيبقى الزر مخفيًا.'}
+      else{var d=digits(v).replace(/^00/,'');if(d.charAt(0)==='0')d='213'+d.slice(1);if(/^\d{9,15}$/.test(d)){ok=true;t='سيظهر الزر ويفتح واتساب على الرقم +'+d}else t='الرقم غير صحيح. سيبقى الزر مخفيًا.'}
+      wn.textContent=t;wn.style.color=ok||!v?'':'var(--coral)';
+    }
+    wa.addEventListener('input',function(){s.whatsapp=wa.value;waCheck();save()});waCheck();
+    var g=h('div','g3');g.appendChild(fld('اسم المتجر',nm));g.appendChild(fld('هاتف المتجر',ph));var wf=fld('واتساب المتجر (رقم أو رابط)',wa);wf.appendChild(wn);g.appendChild(wf);p.appendChild(g);
     p.appendChild(sw('s-dup',s.dupAlert,'تنبيه تكرار الهاتف في الطلبات',function(v){s.dupAlert=v;save()}));w.appendChild(p);
+
+    var pr=panel('حماية الطلبات');
+    var ac=inp('s-ac','number',s.autoCancelHours===undefined?48:s.autoCancelHours);ac.min='0';ac.max='720';ac.setAttribute('dir','ltr');
+    ac.addEventListener('input',function(){s.autoCancelHours=ac.value===''?'':+ac.value;save()});
+    var mp=inp('s-mp','number',s.maxPerPhone===undefined?4:s.maxPerPhone);mp.min='0';mp.max='50';mp.setAttribute('dir','ltr');
+    mp.addEventListener('input',function(){s.maxPerPhone=mp.value===''?'':+mp.value;save()});
+    var pg=h('div','g2');
+    pg.appendChild(fld('إلغاء الطلب غير المؤكد تلقائيًا بعد (ساعات)',ac,'يُلغى الطلب «قيد التأكيد» ويعود مخزونه. اكتب 0 للتعطيل. يعمل بعد تشغيل الدالة installTriggers مرة واحدة في Apps Script.'));
+    pg.appendChild(fld('أقصى عدد طلبات لنفس الرقم خلال 6 ساعات',mp,'اكتب 0 للتعطيل. أثناء التجربة بهاتفك قد تحتاج رفعه مؤقتًا.'));
+    pr.appendChild(pg);w.appendChild(pr);
 
     var b=panel('الأرقام المحظورة');var list=h('div','list');list.style.maxHeight='none';
     function drawBlocked(){list.innerHTML='';if(!s.blocked.length)list.appendChild(h('p','note','لا أرقام محظورة.'));s.blocked.forEach(function(n,i){var r=h('div','attn');var li=h('li');li.appendChild(h('span','ph',n));li.appendChild(btn('إزالة','btn ghost sm',function(){s.blocked.splice(i,1);save();drawBlocked()}));r.appendChild(li);list.appendChild(r)})}
