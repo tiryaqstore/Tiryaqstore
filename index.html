@@ -148,6 +148,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);ba
 input[aria-invalid="true"],select[aria-invalid="true"]{border-color:var(--coral)}
 select option{background:#14241A;color:var(--ink)}
 .err{color:var(--coral);font-size:13px;min-height:1.3em}
+.f[hidden]{display:none}.req-note{margin:0 0 12px;color:var(--ink-2)}.f-hint{margin:10px 0 0;color:var(--amber,var(--gold));text-align:center;min-height:1.3em}
+#f-submit.incomplete{opacity:.55;filter:saturate(.6)}.blks-top{margin-bottom:6px}.blks-mid{margin-block:6px}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .seg label{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;border:1px solid var(--field-line);background:var(--field);cursor:pointer;color:var(--ink);transition:border-color .25s,background .25s}
 .seg input{width:auto;min-height:0;accent-color:var(--gold)}
@@ -638,27 +640,27 @@ window.__API='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6W
     var ul=h('ul','pfeat');drawFeatures(ul,p);info.appendChild(ul);
     info.appendChild(btn('+ إضافة ميزة','btn ghost sm add-feat',function(){p.features.push('ميزة جديدة');save();drawFeatures(ul,p);refreshEditable()}));
     var wrap=h('div');var wa=dedit(h('a','btn ghost','اسأل عن المنتج عبر واتساب'),'wa-t');var wu=waStore(S.settings.whatsapp,'السلام عليكم ورحمة الله 🌿\nأعجبني منتجكم «'+p.name+'» ✨ وأودّ معرفة المزيد عنه 🤍\n\nهل هو متوفر حاليًا؟ وكيف يمكنني الطلب والتوصيل إلى ولايتي؟ 🚚\nشكرًا لكم مقدّمًا على حسن تعاملكم 🙏');if(wu){wa.href=wu;wa.target='_blank';wa.rel='noopener';wrap.appendChild(wa);markBlock(wrap,'wa-btn');info.appendChild(wrap)}
-    g.appendChild(pic);g.appendChild(info);box.appendChild(g);
+    g.appendChild(pic);g.appendChild(info);box.appendChild(g);drawBlocks(box,p,'top',g);
 
-    var h2=dedit(h('h2','h2 rise','اطلب الآن'),'order-h');h2.id='order-anchor';h2.style.setProperty('--i','3');box.appendChild(h2);
+    var h2=dedit(h('h2','h2 rise','اطلب الآن'),'order-h');h2.id='order-anchor';h2.style.setProperty('--i','3');box.appendChild(h2);drawBlocks(box,p,'mid',h2);
     var ord=h('div','order'),form=h('form','glass panel rise');form.id='form';form.noValidate=true;form.style.setProperty('--i','4');
-    form.innerHTML='<div class="fields">'+
+    form.innerHTML='<p class="note req-note">كل الخانات إلزامية، ولا يُرسل الطلب إلا بعد ملئها كلها.</p><div class="fields">'+
       '<div aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none"><label for="f-fax">اترك هذا الحقل فارغًا</label><input id="f-fax" name="fax" tabindex="-1" autocomplete="off"></div>'+
       '<div class="f"><label for="f-name">الاسم الكامل</label><input id="f-name" autocomplete="name" placeholder="مثال: أمين بن علي"><span class="err" id="e-f-name"></span></div>'+
       '<div class="f"><label for="f-phone">رقم الهاتف</label><input id="f-phone" inputmode="tel" autocomplete="tel" dir="ltr" placeholder="05 55 12 34 56" style="text-align:right"><span class="err" id="e-f-phone"></span></div>'+
       '<div class="f"><label for="f-wilaya">الولاية</label><select id="f-wilaya"></select><span class="err" id="e-f-wilaya"></span></div>'+
       '<div class="f"><label for="f-commune">البلدية</label><input id="f-commune" placeholder="اسم البلدية"><span class="err" id="e-f-commune"></span></div>'+
       '<div class="f full"><span class="lbl">طريقة التسليم</span><div class="seg"><label><input type="radio" name="ship" value="home" checked>إلى المنزل</label><label><input type="radio" name="ship" value="desk">إلى مكتب التوصيل</label></div></div>'+
-      '<div class="f full"><label for="f-addr">العنوان (للتسليم إلى المنزل)</label><input id="f-addr" autocomplete="street-address" placeholder="الحي، الشارع، رقم المنزل"></div>'+
+      '<div class="f full" id="fw-addr"><label for="f-addr">العنوان الكامل</label><input id="f-addr" autocomplete="street-address" placeholder="الحي، الشارع، رقم المنزل"><span class="err" id="e-f-addr"></span></div>'+
       '<div class="f full"><span class="lbl">الكمية</span><div class="qty"><button type="button" id="q-plus" aria-label="زيادة">+</button><output id="q-val">1</output><button type="button" id="q-minus" aria-label="نقصان">−</button></div><span class="note" id="q-note"></span></div>'+
-      '</div><button class="btn" id="f-submit" data-edit="order-btn" style="width:100%;margin-top:18px;min-height:50px" type="submit">تأكيد الطلب · الدفع عند الاستلام</button>';
+      '</div><button class="btn" id="f-submit" data-edit="order-btn" style="width:100%;margin-top:18px;min-height:50px" type="submit">تأكيد الطلب · الدفع عند الاستلام</button><p class="note f-hint" id="f-hint" role="status"></p>';
     var sum=h('aside','glass panel sum rise');sum.style.setProperty('--i','5');sum.setAttribute('aria-live','polite');
     sum.innerHTML='<h3 data-edit="sum-h">ملخص الطلب</h3><dl>'+
       '<div class="r"><dt>المنتج</dt><dd id="s-prod">-</dd></div><div class="r"><dt>السعر</dt><dd id="s-price">-</dd></div>'+
       '<div class="r d"><dt>الخصم</dt><dd id="s-disc">-</dd></div><div class="r"><dt>التوصيل</dt><dd id="s-ship">اختر الولاية</dd></div>'+
       '<div class="r t"><dt>المجموع</dt><dd id="s-total">-</dd></div></dl><p class="note" id="s-note" style="margin-top:12px"></p>';
     ord.appendChild(form);ord.appendChild(sum);box.appendChild(ord);
-    var done=h('div','done glass');done.id='done';done.setAttribute('role','status');box.appendChild(done);drawBlocks(box,p);
+    var done=h('div','done glass');done.id='done';done.setAttribute('role','status');box.appendChild(done);drawBlocks(box,p,'end');
 
     var rel=h('div');var others=S.products.map(function(x,ix){return [x,ix]}).filter(function(z){return z[1]!==i&&(z[0].visible||editing)}).slice(0,3);
     if(others.length){
@@ -688,6 +690,22 @@ window.__API='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6W
     $('q-plus').onclick=function(){if(cur.qty<maxQty()){cur.qty++;upd()}};
     $('q-minus').onclick=function(){if(cur.qty>1){cur.qty--;upd()}};
     ws.onchange=upd;document.querySelectorAll('#form input[name="ship"]').forEach(function(r){r.onchange=upd});
+    /* الخانات الناقصة: تُحسب مباشرة، ويظهر للزبون ما بقي، والزر يبهت حتى يكتمل كل شيء */
+    function missing(){
+      var m=[],nm=$('f-name').value.trim(),ph=$('f-phone').value.replace(/[\s.\-]/g,'');
+      if(nm.length<3)m.push('الاسم');if(!/^0[567]\d{8}$/.test(ph))m.push('الهاتف');if(!+ws.value)m.push('الولاية');
+      if(!$('f-commune').value.trim())m.push('البلدية');if(shipType()==='home'&&$('f-addr').value.trim().length<5)m.push('العنوان');
+      return m;
+    }
+    function hintUpd(){
+      var m=missing(),hb=$('f-hint'),sb=$('f-submit');if(!hb||!sb)return;
+      hb.textContent=m.length?'بقي لإتمام الطلب: '+m.join('، '):'';sb.classList.toggle('incomplete',m.length>0&&p.stock>0);
+      var aw=$('fw-addr');if(aw){var hm=shipType()==='desk';aw.hidden=hm}
+    }
+    ['f-name','f-phone','f-commune','f-addr'].forEach(function(id){var e=$(id);if(e)e.addEventListener('input',function(){if(e.getAttribute('aria-invalid')==='true')ve(id,'');hintUpd()})});
+    ws.addEventListener('change',function(){ve('f-wilaya','');hintUpd()});
+    document.querySelectorAll('#form input[name="ship"]').forEach(function(r){r.addEventListener('change',function(){ve('f-addr','');hintUpd()})});
+    hintUpd();
     var t0=Date.now();
     form.addEventListener('focusin',function(){if(!cur.started){cur.started=true;pixelEv('InitiateCheckout',p.name,false,{content_ids:[p.id],content_name:p.name,content_type:'product',value:p.price*cur.qty,currency:'DZD',num_items:cur.qty})}});
     if(p.stock<=0){$('f-submit').disabled=true;$('f-submit').textContent='نفد المخزون'}
@@ -698,6 +716,8 @@ window.__API='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6W
       var pOk=/^0[567]\d{8}$/.test(phone);ve('f-phone',pOk?'':'رقم غير صحيح: 10 أرقام تبدأ بـ 05 أو 06 أو 07');if(!pOk)ok=false;
       ve('f-wilaya',w?'':'اختر الولاية');if(!w)ok=false;
       ve('f-commune',com?'':'اكتب اسم البلدية');if(!com)ok=false;
+      var adv=$('f-addr').value.trim(),aNeed=shipType()==='home';
+      ve('f-addr',aNeed&&adv.length<5?'اكتب العنوان الكامل (الحي والشارع)':'');if(aNeed&&adv.length<5)ok=false;
       if(p.stock<cur.qty){ok=false;ve('f-name','الكمية المطلوبة أكبر من المخزون المتاح')}
       if(!ok){var bad=document.querySelector('#form [aria-invalid="true"]');if(bad)bad.focus();return}
       var ship=shipType(),c=calcWith(S.delivery,p,cur.qty,w,ship);
@@ -707,7 +727,7 @@ window.__API='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6W
       dn.appendChild(h('p',null,'سنتصل بك على '+o.phone+' لتأكيد الطلب. المبلغ المطلوب عند الاستلام: '+fmt(o.total)+'.'));
       var go2=h('a','btn ghost sm','تابع التسوق');go2.href='#store';go2.style.marginTop='12px';dn.appendChild(go2);
       dn.classList.add('show');dn.scrollIntoView({behavior:'smooth',block:'center'});
-              cur.qty=1;cur.started=false;form.reset();upd();
+              cur.qty=1;cur.started=false;form.reset();upd();hintUpd();
       }
       if(LIVE){
         var sb=$('f-submit'),sl=sb.textContent;sb.disabled=true;sb.textContent='جارٍ إرسال الطلب...';
@@ -729,7 +749,7 @@ window.__API='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6W
     $('bb-name').textContent=p.name;$('bb-price').textContent=fmt(p.price);
     $('bb-btn').disabled=p.stock<=0;
     $('bb-btn').onclick=function(){
-      var ids=['f-name','f-phone','f-wilaya','f-commune'],t=null;
+      var ids=['f-name','f-phone','f-wilaya','f-commune'].concat(shipType()==='home'?['f-addr']:[]),t=null;
       for(var q=0;q<ids.length;q++){var e=$(ids[q]);if(e&&!String(e.value||'').trim()){t=e;break}}
       if(!t)t=$('f-submit')||$('f-name');
       if(!t){var a=$('order-anchor');if(a)a.scrollIntoView({behavior:'smooth'});return}
@@ -895,11 +915,13 @@ window.__API='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6W
     var tx=h('div','bx-tx');if(b.v)tx.appendChild(h('b','bx-t',b.v));if(b.s)tx.appendChild(h('p','bx-s',b.s));
     c.classList.add('bx-info');c.appendChild(tx);return c;
   }
-  function drawBlocks(box,p){
-    var bl=p.blocks||[];if(!bl.length)return;
-    var wrap=h('div','blks');
+  /* مناطق العناصر: top = أعلى الصفحة · mid = بين المنتج ونموذج الطلب · end (الافتراضي) = أسفل النموذج */
+  function drawBlocks(box,p,zone,before){
+    zone=zone||'end';var bl=p.blocks||[];if(!bl.length)return;
+    var wrap=h('div','blks blks-'+zone),made=0;
     bl.forEach(function(b,k){
       if(b.hid)return;
+      if((b.z==='top'||b.z==='mid'?b.z:'end')!==zone)return;
       var w=b.w||100,el=h('div','blk2'),c;
       el.style.width=w>=100?'100%':'calc('+w+'% - '+(12*(1-w/100)).toFixed(2)+'px)';
       el.style.justifyContent=b.a==='c'?'center':(b.a==='l'?'flex-end':'flex-start');
@@ -919,9 +941,10 @@ window.__API='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6W
       else return;
       if(b.fs&&(b.t==='h'||b.t==='p'||b.t==='btn'))c.style.fontSize=b.fs+'px';
       if(b.a&&(b.t==='h'||b.t==='p'))c.style.textAlign=b.a==='c'?'center':(b.a==='l'?'left':'right');
-      c.style.setProperty('--i',String(6+k));el.appendChild(c);wrap.appendChild(el);
+      c.style.setProperty('--i',String(zone==='end'?6+k:1+Math.min(k,4)));el.appendChild(c);wrap.appendChild(el);made++;
     });
-    box.appendChild(wrap);
+    if(!made)return;
+    if(before&&before.parentNode===box)box.insertBefore(wrap,before);else box.appendChild(wrap);
   }
   var FONTS=[['Reem Kufi','500;700'],['IBM Plex Sans Arabic','400;500;600'],['Cairo','400;600;700'],['Tajawal','400;500;700'],['Almarai','400;700'],['Noto Kufi Arabic','400;600;700'],['Vazirmatn','400;600;700'],['Readex Pro','400;600;700'],['El Messiri','400;600;700'],['Changa','400;600;700'],['Mada','400;600;700'],['Rubik','400;600;700'],['Baloo Bhaijaan 2','400;600;700'],['Lemonada','400;600;700'],['Markazi Text','400;600;700'],['Harmattan','400;500;600;700'],['Amiri','400;700'],['Aref Ruqaa','400;700'],['Lalezar','400']];
   function loadFont(n){var f=FONTS.filter(function(x){return x[0]===n})[0];if(!f)return false;var id='gf-'+n.replace(/\W/g,'');if(!document.getElementById(id)){var l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family='+n.replace(/ /g,'+')+':wght@'+f[1]+'&display=swap';document.head.appendChild(l)}return true}
