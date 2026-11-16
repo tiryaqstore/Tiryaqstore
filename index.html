@@ -244,8 +244,26 @@ body[data-view="home"] #shint{display:none}
 .view.on .tk{animation:tkIn .7s var(--ease) both;animation-delay:var(--d,1s)}
 @keyframes tkIn{from{opacity:0;transform:translateX(70px)}to{opacity:1;transform:none}}
 .pblk{padding:16px 20px;color:var(--ink-2);line-height:1.9}
-.blks{display:flex;flex-wrap:wrap;gap:12px}.blk2{display:flex;min-width:0}.blk2>.pblk,.blk2>.pimg,.blk2>.h2{width:100%}.blk2>.h2{margin-top:0}.blk2>*{max-width:100%}
+.blks{display:flex;flex-wrap:wrap;gap:12px}.blk2{display:flex;min-width:0}.blk2>.pblk,.blk2>.pimg,.blk2>.h2,.blk2>.faq,.blk2>.bx{width:100%}.blk2>.h2{margin-top:0}.blk2>*{max-width:100%}
 .pblk{white-space:pre-line}.pimg img{object-fit:cover}
+.faq-h{margin:0 0 10px}.faq-l{display:flex;flex-direction:column;gap:8px}
+.fq{padding:0;overflow:hidden}.fq>summary{list-style:none;cursor:pointer;padding:15px 18px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:48px}
+.fq>summary::-webkit-details-marker{display:none}
+.fq>summary::after{content:'+';flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--field);border:1px solid var(--field-line);color:var(--gold);font-size:18px;line-height:1;transition:transform .25s var(--ease)}
+.fq[open]>summary::after{content:'−'}
+.fq .fa{padding:0 18px 16px;color:var(--ink-2);line-height:1.9;white-space:pre-line}
+.faq-open .fq,.faq-card .fq{padding:15px 18px}.faq-open .fq .fa,.faq-card .fq .fa{padding:6px 0 0}.fq-q{display:block;font-weight:600}
+.faq-card .faq-l{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px}
+.bx{padding:16px 18px;display:flex;flex-direction:column;gap:8px;border-width:1.5px}
+.bx-gold{border-color:rgba(240,196,106,.55);background:linear-gradient(160deg,rgba(240,196,106,.16),var(--glass))}
+.bx-green{border-color:rgba(165,204,132,.5);background:linear-gradient(160deg,rgba(165,204,132,.15),var(--glass))}
+.bx-info{flex-direction:row;align-items:center;gap:14px}.bx-ic{flex:none;font-size:30px;line-height:1}.bx-tx{min-width:0;display:flex;flex-direction:column;gap:3px}
+.bx-t{font-family:var(--f-display);font-size:1.12em}.bx-gold .bx-t{color:var(--gold)}.bx-green .bx-t{color:var(--moss)}
+.bx-s{color:var(--ink-2);line-height:1.8;font-size:.95em;white-space:pre-line}
+.bx-rows{display:flex;flex-direction:column;gap:6px}
+.bx-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:9px 12px;border-radius:12px;background:var(--field)}
+.bx-q{font-weight:600}.bx-d{background:var(--gold);color:var(--gold-ink);border-radius:999px;padding:1px 9px;font-weight:700;font-size:.9em}
+.bx-p{margin-inline-start:auto;font-weight:700}.bx-sv{color:var(--moss);font-size:.88em}.bx-end{color:var(--ink-3)}
 .ppic img{display:block;max-width:100%;max-height:340px;border-radius:14px}.card .pic img{width:100%;height:100%;object-fit:cover}
 
 .pimg{padding:8px;overflow:hidden}
@@ -378,11 +396,26 @@ window.__API='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6W
   }
   function btn(t,c,fn){var b=h('button',c,t);b.type='button';b.addEventListener('click',fn);return b}
 
-  /* price, 10% discount from 2 pieces, free delivery over a threshold */
+  /* عرض المنتج: خصم بالكمية وتوصيل مجاني، يُحدَّد لكل منتج من لوحة الإدارة ويطبّقه الخادم نفسه عند الطلب.
+     الغياب = الافتراضي القديم (10% من قطعتين). */
+  function offerOf(p){var o=p&&p.offer;return(o&&typeof o==='object'&&!Array.isArray(o))?o:{off:false,tiers:[{q:2,p:10}],fs:0,end:''}}
+  function offerOn(o){if(!o||o.off)return false;if(o.end){var t=Date.parse(o.end+'T23:59:59+01:00');if(isFinite(t)&&Date.now()>t)return false}return true}
+  function offerCalc(p,qty,sub){
+    var o=offerOf(p);if(!offerOn(o))return {disc:0,fs:false};
+    var pc=0;(o.tiers||[]).forEach(function(t){if(qty>=t.q&&t.p>pc)pc=t.p});
+    return {disc:pc?Math.round(sub*pc/100):0,fs:!!(o.fs&&qty>=o.fs)};
+  }
+  function offerHint(p){
+    var o=offerOf(p);if(!offerOn(o))return '';
+    var t=(o.tiers||[]).slice().sort(function(a,b){return a.q-b.q}),qn=function(q){return q===2?'قطعتين':q+' قطع'};
+    if(t.length){var mx=t.reduce(function(m,x){return x.p>m?x.p:m},0);return 'اطلب '+qn(t[0].q)+' أو أكثر واحصل على خصم '+t[0].p+'%'+(t.length>1?' (يصل إلى '+mx+'%)':'')+(o.fs?' مع توصيل مجاني من '+o.fs+' قطع':'')}
+    return o.fs?'اطلب '+qn(o.fs)+' أو أكثر واحصل على توصيل مجاني':'';
+  }
+  /* price, quantity discount from the product offer, free delivery over a threshold */
   function calcWith(dl,p,qty,wil,type){
-    var sub=p.price*qty,disc=qty>=2?Math.round(sub*.1):0,net=sub-disc,fee=null,free=false;
-    if(wil){fee=dl.rates[(SOUTH[wil]?'s':'n')+'_'+type];if(net>=dl.freeOver){fee=0;free=true}}
-    return {sub:sub,disc:disc,net:net,fee:fee,free:free,total:net+(fee||0)};
+    var sub=p.price*qty,oc=offerCalc(p,qty,sub),disc=oc.disc,net=sub-disc,fee=null,free=false;
+    if(wil){fee=dl.rates[(SOUTH[wil]?'s':'n')+'_'+type];if(net>=dl.freeOver||oc.fs){fee=0;free=true}}
+    return {sub:sub,disc:disc,net:net,fee:fee,free:free,fs:oc.fs,total:net+(fee||0)};
   }
 
   var API_URL='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6WM_sfd73gtz9FgcHeTExTQ6otRp4EM1oGhPb_bLq29xA/exec',LIVE=!!API_URL;/* رابط Apps Script بعد النشر (الخطوة 3) */
@@ -615,7 +648,7 @@ window.__API='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6W
       '<div class="f"><label for="f-commune">البلدية</label><input id="f-commune" placeholder="اسم البلدية"><span class="err" id="e-f-commune"></span></div>'+
       '<div class="f full"><span class="lbl">طريقة التسليم</span><div class="seg"><label><input type="radio" name="ship" value="home" checked>إلى المنزل</label><label><input type="radio" name="ship" value="desk">إلى مكتب التوصيل</label></div></div>'+
       '<div class="f full"><label for="f-addr">العنوان (للتسليم إلى المنزل)</label><input id="f-addr" autocomplete="street-address" placeholder="الحي، الشارع، رقم المنزل"></div>'+
-      '<div class="f full"><span class="lbl">الكمية</span><div class="qty"><button type="button" id="q-plus" aria-label="زيادة">+</button><output id="q-val">1</output><button type="button" id="q-minus" aria-label="نقصان">−</button></div><span class="note">اطلب قطعتين أو أكثر واحصل على خصم 10%</span></div>'+
+      '<div class="f full"><span class="lbl">الكمية</span><div class="qty"><button type="button" id="q-plus" aria-label="زيادة">+</button><output id="q-val">1</output><button type="button" id="q-minus" aria-label="نقصان">−</button></div><span class="note" id="q-note"></span></div>'+
       '</div><button class="btn" id="f-submit" data-edit="order-btn" style="width:100%;margin-top:18px;min-height:50px" type="submit">تأكيد الطلب · الدفع عند الاستلام</button>';
     var sum=h('aside','glass panel sum rise');sum.style.setProperty('--i','5');sum.setAttribute('aria-live','polite');
     sum.innerHTML='<h3 data-edit="sum-h">ملخص الطلب</h3><dl>'+
@@ -637,6 +670,7 @@ window.__API='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6W
     }
     var ft=h('div','foot rise');ft.style.setProperty('--i','7');makeFoot(ft);box.appendChild(ft);
 
+    var qnote=$('q-note');qnote.textContent=offerHint(p);qnote.hidden=!qnote.textContent;
     var ws=$('f-wilaya');var o0=h('option',null,'اختر الولاية');o0.value='';ws.appendChild(o0);
     WIL.forEach(function(w,ix){var o=h('option',null,pad(ix+1)+' - '+w);o.value=String(ix+1);ws.appendChild(o)});
     function maxQty(){return Math.max(1,Math.min(10,p.stock))}
@@ -647,7 +681,7 @@ window.__API='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6W
       $('s-disc').textContent=c.disc?'−'+fmt(c.disc):'لا يوجد';
       $('s-ship').textContent=c.fee===null?'اختر الولاية':(c.free?'مجاني':fmt(c.fee));
       $('s-total').textContent=fmt(c.total);
-      $('s-note').textContent=c.net>=S.delivery.freeOver?'طلبك يشمل التوصيل المجاني.':'أضف '+fmt(S.delivery.freeOver-c.net)+' للحصول على توصيل مجاني. تدفع المبلغ للمندوب عند الاستلام.';
+      $('s-note').textContent=(c.net>=S.delivery.freeOver||c.fs)?'طلبك يشمل التوصيل المجاني.':'أضف '+fmt(S.delivery.freeOver-c.net)+' للحصول على توصيل مجاني. تدفع المبلغ للمندوب عند الاستلام.';
     }
     $('q-plus').onclick=function(){if(cur.qty<maxQty()){cur.qty++;upd()}};
     $('q-minus').onclick=function(){if(cur.qty>1){cur.qty--;upd()}};
@@ -823,17 +857,62 @@ window.__API='https://script.google.com/macros/s/AKfycbwPCEJsMBt_wf7aPvWNv7_NB6W
     return g;
   }
   function safeUrl(u){return /^(https?:\/\/|tel:|mailto:|#)/.test(u||'')?u:'#store'}
+  /* أسئلة شائعة: acc = تنفتح عند الضغط، open = كل الأجوبة ظاهرة، card = بطاقات */
+  function drawFaq(b){
+    var items=(b.items||[]).filter(function(x){return x&&x.q&&x.a});if(!items.length)return null;
+    var k=b.k==='open'||b.k==='card'?b.k:'acc',c=h('section','faq faq-'+k);
+    if(b.v)c.appendChild(h('h2','h2 faq-h',b.v));
+    var l=h('div','faq-l');
+    items.forEach(function(it){
+      var e;
+      if(k==='acc'){e=h('details','glass fq');var sm=h('summary',null,it.q);e.appendChild(sm);e.appendChild(h('div','fa',it.a))}
+      else{e=h('div','glass fq');e.appendChild(h('b','fq-q',it.q));e.appendChild(h('p','fa',it.a))}
+      l.appendChild(e);
+    });
+    c.appendChild(l);return c;
+  }
+  /* مربعات: offer = تُبنى تلقائيًا من عرض المنتج الحقيقي (لا يمكن أن تعد بما لا يُطبَّق)، info = أيقونة وعنوان ونص */
+  function drawBox(b,p){
+    var st=b.st==='green'||b.st==='plain'?b.st:'gold',c=h('div','glass bx bx-'+st);
+    if(b.k==='offer'){
+      var o=offerOf(p);if(!offerOn(o))return null;
+      var rows=[];
+      (o.tiers||[]).forEach(function(t){var full=p.price*t.q,pay=Math.round(full*(100-t.p)/100);rows.push([t.q===2?'قطعتان':t.q+' قطع','−'+t.p+'%',fmt(pay),'وفّر '+fmt(full-pay)])});
+      if(!rows.length&&!o.fs)return null;
+      c.appendChild(h('b','bx-t',(b.ic?b.ic+' ':'')+(b.v||'عرض خاص')));
+      if(b.s)c.appendChild(h('p','bx-s',b.s));
+      var ul=h('div','bx-rows');
+      rows.forEach(function(r){var li=h('div','bx-row');li.appendChild(h('span','bx-q',r[0]));li.appendChild(h('span','bx-d',r[1]));li.appendChild(h('span','bx-p',r[2]));li.appendChild(h('span','bx-sv',r[3]));ul.appendChild(li)});
+      if(o.fs){var lf=h('div','bx-row bx-fs');lf.appendChild(h('span','bx-q','توصيل مجاني'));lf.appendChild(h('span','bx-p','من '+o.fs+' قطع'));ul.appendChild(lf)}
+      c.appendChild(ul);
+      if(o.end){var dd=new Date(o.end+'T12:00:00+01:00');c.appendChild(h('small','bx-end','ينتهي العرض في '+(isFinite(dd)?dd.toLocaleDateString('ar-DZ-u-nu-latn',{day:'numeric',month:'long',year:'numeric'}):o.end)))}
+      return c;
+    }
+    if(!b.v&&!b.s)return null;
+    if(b.ic)c.appendChild(h('span','bx-ic',b.ic));
+    var tx=h('div','bx-tx');if(b.v)tx.appendChild(h('b','bx-t',b.v));if(b.s)tx.appendChild(h('p','bx-s',b.s));
+    c.classList.add('bx-info');c.appendChild(tx);return c;
+  }
   function drawBlocks(box,p){
     var bl=p.blocks||[];if(!bl.length)return;
     var wrap=h('div','blks');
     bl.forEach(function(b,k){
+      if(b.hid)return;
       var w=b.w||100,el=h('div','blk2'),c;
       el.style.width=w>=100?'100%':'calc('+w+'% - '+(12*(1-w/100)).toFixed(2)+'px)';
       el.style.justifyContent=b.a==='c'?'center':(b.a==='l'?'flex-end':'flex-start');
       if(b.t==='h'){c=h('h2','h2 rise',b.v)}
       else if(b.t==='p'){c=h('p','glass pblk rise',b.v)}
       else if(b.t==='img'){if(!safeImg(b.v))return;c=h('div','glass pimg rise');var im=h('img');im.src=b.v;im.alt='';im.loading='lazy';if(b.h)im.style.height=b.h+'px';c.appendChild(im)}
-      else if(b.t==='btn'){c=h('a','btn rise',b.v);c.href=safeUrl(b.u)}
+      else if(b.t==='btn'){
+        c=h('a','btn rise',b.v);var u=b.u||'#store';
+        if(u==='@order'){c.href='#order-anchor';c.addEventListener('click',function(e){e.preventDefault();var a=$('order-anchor');if(a)a.scrollIntoView({behavior:'smooth',block:'start'})})}
+        else if(u==='@top'){c.href='#';c.addEventListener('click',function(e){e.preventDefault();window.scrollTo({top:0,behavior:'smooth'})})}
+        else if(u==='@wa'){var wl=waStore(S.settings.whatsapp,'السلام عليكم ورحمة الله 🌿\nأودّ الاستفسار عن «'+p.name+'»');if(!wl)return;c.href=wl;c.target='_blank';c.rel='noopener'}
+        else c.href=safeUrl(u);
+      }
+      else if(b.t==='faq'){c=drawFaq(b);if(!c)return}
+      else if(b.t==='box'){c=drawBox(b,p);if(!c)return}
       else if(b.t==='sp'){c=h('div');c.style.height=(b.h||30)+'px';c.style.width='100%'}
       else return;
       if(b.fs&&(b.t==='h'||b.t==='p'||b.t==='btn'))c.style.fontSize=b.fs+'px';
