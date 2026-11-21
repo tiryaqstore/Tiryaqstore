@@ -602,8 +602,6 @@ table.rates input{min-height:40px;max-width:140px;text-align:end}
     S.tg=S.tg||{};S.tg.chats=Array.isArray(S.tg.chats)?S.tg.chats:[];if(S.tg.chat){if(!S.tg.chats.some(function(c){return c.id===S.tg.chat}))S.tg.chats.push({id:S.tg.chat,name:''});S.tg.chat=''}
     synced={};CFGK.forEach(function(k){synced[k]=cfgSig(k)});synced.products=sig();
     applyContent();cacheAdmin();
-    /* رابط موقعك: يُحفظ تلقائيًا مرة واحدة ليعمل زر «اتصال» في رسائل تيليجرام */
-    if(ROLE==='admin'&&location.protocol==='https:'&&!S.settings.siteUrl){S.settings.siteUrl=location.origin+location.pathname.replace(/[^\/]*$/,'');queueSync()}
   }
   function pullAdmin(redraw){
     return api('adminData').then(function(r){
